@@ -175,6 +175,11 @@ void BadSlam::ProcessFrame(int frame_index, bool force_keyframe) {
       rgbd_video_->color_frame_mutable(frame_index)->GetImage().get();
   /*const shared_ptr<Image<u16>>& depth_image =*/
       rgbd_video_->depth_frame_mutable(frame_index)->GetImage();
+
+  vis::Time color_ts = rgbd_video_->color_ts_mutable(frame_index);
+  vis::Time depth_ts = rgbd_video_->depth_ts_mutable(frame_index);
+  // std::cout << "ts: " << color_ts.toNSec() << " " << depth_ts.toNSec() << std::endl;
+
   
   // After I/O is done, start the "no I/O" frame timer.
   frame_timer_.Start();

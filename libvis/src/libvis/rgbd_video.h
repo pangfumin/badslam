@@ -61,11 +61,13 @@ class RGBDVideo {
   inline std::vector<Time>* color_timestamps_mutable() { return &color_timestamps_; }
   inline ConstColorFrame color_frame(int i) const { return color_frames_.at(i); }
   inline ColorFrame& color_frame_mutable(int i) { return color_frames_.at(i); }
+  inline Time& color_ts_mutable(int i) { return color_timestamps_.at(i); }
   
   inline DepthFramesVector* depth_frames_mutable() { return &depth_frames_; }
   inline std::vector<Time>* depth_timestamps_mutable() { return &depth_timestamps_; }
   inline ConstDepthFrame depth_frame(int i) const { return depth_frames_.at(i); }
   inline DepthFrame& depth_frame_mutable(int i) { return depth_frames_.at(i); }
+  inline Time& depth_ts_mutable(int i) { return depth_timestamps_.at(i); }
 
 
   inline std::vector<Imu>* imu_frames_mutable() { return &imu_frames_; }
