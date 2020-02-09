@@ -140,7 +140,9 @@ if (TARGET Qt5::Core AND UNIX)
 endif()
 
 # OpenCV (external, required)
-find_package(OpenCV REQUIRED)
+SET(OpenCV_DIR "/usr/local/share/OpenCV")
+find_package(OpenCV 3.3.0 REQUIRED)
+
 
 # Settings.
 if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUXX)

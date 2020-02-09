@@ -552,6 +552,7 @@ void DirectBA::BundleAdjustmentAlternating(
         }
         
         SE3f global_T_frame_estimate;
+        
         EstimateFramePose(stream,
                           keyframe->global_T_frame(),
                           keyframe->depth_buffer(),

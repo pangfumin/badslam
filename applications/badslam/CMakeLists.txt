@@ -141,6 +141,7 @@ if (CMAKE_CUDA_COMPILER)
     ${OpenCV_LIBS}
     ${X11_LIBRARIES}
     ${Boost_LIBRARIES}
+    -luuid
   )
   
   
@@ -168,6 +169,7 @@ if (CMAKE_CUDA_COMPILER)
     gtest_main
     Threads::Threads
     ${X11_LIBRARIES}
+    -luuid
   )
   add_test(badslam_test
     badslam_test
