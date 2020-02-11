@@ -430,7 +430,7 @@ int LIBVIS_QT_MAIN(int argc, char** argv) {
     if (!gui_run && !ShowSettingsWindow(&dataset_folder_path, &bad_slam_config, &start_paused)) {
       return EXIT_SUCCESS;
     }
-    
+    std::cout << "run ShowMainWindow" << std::endl;
     ShowMainWindow(
         qapp,
         start_paused,
@@ -444,6 +444,7 @@ int LIBVIS_QT_MAIN(int argc, char** argv) {
         show_input_images,
         window_default_width,
         window_default_height);
+    
     return EXIT_SUCCESS;
   } else if (dataset_folder_path == "live://realsense") {
     rs_input.Start(&rgbd_video, &depth_scaling);
