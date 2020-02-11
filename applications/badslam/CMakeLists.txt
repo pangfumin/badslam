@@ -14,6 +14,7 @@ if (CMAKE_CUDA_COMPILER)
   endif()
 
   add_subdirectory(third_party/DBoW2)
+  add_subdirectory(third_party/g2o)
   
   find_package(opengv REQUIRED)
   
@@ -68,6 +69,7 @@ if (CMAKE_CUDA_COMPILER)
       src
       third_party/cub-1.8.0
       third_party/DBoW2
+      third_party/g2o
       ${SuiteSparse_INCLUDE_DIRS}
       ${GLEW_INCLUDE_DIR}
       # ${DLib_INCLUDE_DIRS}
@@ -107,6 +109,7 @@ if (CMAKE_CUDA_COMPILER)
       ${OpenCV_LIBS}
       # ${DLib_LIBS}
       DBoW2
+      g2o
       ${realsense2_LIBRARY}
       ${OPENGL_LIBRARY}
       ${GLEW_LIBRARIES}

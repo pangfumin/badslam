@@ -66,13 +66,13 @@ SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${g2o_CXX_FLAGS}")
 SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${g2o_C_FLAGS}")
 
 # Find Eigen3
-SET(EIGEN3_INCLUDE_DIR ${G2O_EIGEN3_INCLUDE})
-FIND_PACKAGE(Eigen3 3.1.0 REQUIRED)
-IF(EIGEN3_FOUND)
-  SET(G2O_EIGEN3_INCLUDE ${EIGEN3_INCLUDE_DIR} CACHE PATH "Directory of Eigen3")
-ELSE(EIGEN3_FOUND)
-  SET(G2O_EIGEN3_INCLUDE "" CACHE PATH "Directory of Eigen3")
-ENDIF(EIGEN3_FOUND)
+# SET(EIGEN3_INCLUDE_DIR ${G2O_EIGEN3_INCLUDE})
+FIND_PACKAGE(Eigen3  REQUIRED)
+IF(Eigen3_FOUND)
+  # SET(G2O_EIGEN3_INCLUDE ${EIGEN3_INCLUDE_DIR} CACHE PATH "Directory of Eigen3")
+ELSE(Eigen3_FOUND)
+  # SET(G2O_EIGEN3_INCLUDE "" CACHE PATH "Directory of Eigen3")
+ENDIF(Eigen3_FOUND)
 
 # Generate config.h
 SET(G2O_CXX_COMPILER "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER}")
@@ -83,10 +83,11 @@ INCLUDE_DIRECTORIES(
 ${g2o_SOURCE_DIR}/core
 ${g2o_SOURCE_DIR}/types
 ${g2o_SOURCE_DIR}/stuff 
-${G2O_EIGEN3_INCLUDE})
+${EIGEN3_INCLUDE_DIR}
+)
 
 # Include the subdirectories
-ADD_LIBRARY(g2o ${G2O_LIB_TYPE}
+set(SRCS_g2o
 #types
 g2o/types/types_sba.h
 g2o/types/types_six_dof_expmap.h
@@ -172,3 +173,25 @@ g2o/stuff/string_tools.cpp
 g2o/stuff/property.cpp       
 g2o/stuff/property.h       
 )
+
+
+set(DEPENDENCY_DIR ${CMAKE_CURRENT_BINARY_DIR}/dependencies)
+set(DEPENDENCY_INSTALL_DIR ${DEPENDENCY_DIR}/install)
+
+
+add_library(${PROJECT_NAME} SHARED ${SRCS_g2o})
+
+target_compile_definitions(${PROJECT_NAME} PRIVATE G2O_EXPORT)
+
+configure_file(g2o.cmake.in
+  "${PROJECT_BINARY_DIR}/g2oConfig.cmake" @ONLY)
+
+install(TARGETS ${PROJECT_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
+install(DIRECTORY include/g2o DESTINATION ${CMAKE_INSTALL_PREFIX}/include)
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/g2oConfig.cmake"
+  DESTINATION ${CMAKE_INSTALL_PREFIX}/include/${PROJECT_NAME})
+install(FILES "${PROJECT_BINARY_DIR}/g2oConfig.cmake" 
+  DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/cmake/g2o/)
+install(DIRECTORY ${DEPENDENCY_INSTALL_DIR}/ DESTINATION ${CMAKE_INSTALL_PREFIX} OPTIONAL)
+
+

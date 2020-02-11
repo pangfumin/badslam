@@ -47,6 +47,14 @@
 #include "badslam/render_window.h"
 
 // #include "ORBVocabulary.h"
+// #include "g2o/types/types_seven_dof_expmap.h"
+// #include "g2o/core/block_solver.h"
+// #include "g2o/core/optimization_algorithm_levenberg.h"
+// #include "g2o/solvers/linear_solver_eigen.h"
+// #include "g2o/types/types_six_dof_expmap.h"
+// #include "g2o/core/robust_kernel_impl.h"
+// #include "g2o/solvers/linear_solver_dense.h"
+// #include "g2o/types/types_seven_dof_expmap.h"
 
 namespace vis {
 
@@ -68,16 +76,24 @@ BadSlam::BadSlam(
       opengl_context_(opengl_context),
       config_(config) {
 
-// for testing DBoW2 link
-    // std::string strVocFile = "/home/pang/disk/software/ORB_SLAM2/Vocabulary/ORBvoc.txt";
-    // ORB_SLAM2::ORBVocabulary* mpVocabulary = new ORB_SLAM2::ORBVocabulary();
-    // bool bVocLoad = mpVocabulary->loadFromTextFile(strVocFile);
-    // if(!bVocLoad)
-    // {
-    //     cerr << "Wrong path to vocabulary. " << endl;
-    //     cerr << "Falied to open at: " << strVocFile << endl;
-    //     exit(-1);
-    // }
+// // for testing DBoW2 link
+//     std::string strVocFile = "/home/pang/disk/software/ORB_SLAM2/Vocabulary/ORBvoc.txt";
+//     ORB_SLAM2::ORBVocabulary* mpVocabulary = new ORB_SLAM2::ORBVocabulary();
+//     bool bVocLoad = mpVocabulary->loadFromTextFile(strVocFile);
+//     if(!bVocLoad)
+//     {
+//         cerr << "Wrong path to vocabulary. " << endl;
+//         cerr << "Falied to open at: " << strVocFile << endl;
+//         exit(-1);
+//     }
+
+
+// for testing g2o link
+    // g2o::SparseOptimizer optimizer;
+    // g2o::BlockSolver_6_3::LinearSolverType * linearSolver;
+
+    // linearSolver = new g2o::LinearSolverEigen<g2o::BlockSolver_6_3::PoseMatrixType>();
+
 
   valid_ = true;
   
