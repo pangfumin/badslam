@@ -211,6 +211,7 @@ class MainWindow : public QMainWindow {
   ImageDisplayQtWindow* current_frame_combined_display = nullptr;
   ImageDisplayQtWindow* current_frame_color_display = nullptr;
   ImageDisplayQtWindow* current_frame_depth_display = nullptr;
+  ImageDisplayQtWindow* current_frame_sparse_feature_display = nullptr;
   QAction* show_intrinsics_act;
   QDialog* intrinsics_dialog = nullptr;
   QLineEdit* color_intrinsics_edit = nullptr;

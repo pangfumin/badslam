@@ -1577,6 +1577,16 @@ class Image {
   cv::Mat WrapInCVMat(int type) {
     return cv::Mat(height(), width(), type, reinterpret_cast<void*>(data()), stride());
   }
+
+  void CopyFromCVMat(const cv::Mat& cvMat) {
+    if (cvMat.type() == CV_8UC3) {
+      SetSize(cvMat.cols, cvMat.rows, cvMat.step, 1);
+      if (!empty()) {
+        memcpy(data_, cvMat.ptr<cv::Vec3b>(), height() * stride());
+      }
+
+    }
+  }
 #endif
   
   

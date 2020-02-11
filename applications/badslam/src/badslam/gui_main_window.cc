@@ -674,15 +674,21 @@ void MainWindow::ShowCurrentFrameImages() {
   current_frame_depth_display->SetDisplayAsWidget();
   current_frame_depth_display->FitContent();
   current_frame_depth_display->SetBlackWhiteValues(0, config_.max_depth / config_.raw_to_float_depth);
+
+  current_frame_sparse_feature_display = new ImageDisplayQtWindow(/*display*/ nullptr, /*parent*/ current_frame_images_dialog);
+  current_frame_sparse_feature_display->SetDisplayAsWidget();
+  current_frame_sparse_feature_display->FitContent();
   
   UpdateCurrentFrameImages(std::max(0, static_cast<int>(frame_index_) - 1), false);
   
   // Tab widget with the images
   QTabWidget* tab_widget = new QTabWidget(current_frame_images_dialog);
   tab_widget->setElideMode(Qt::TextElideMode::ElideRight);
+  tab_widget->addTab(current_frame_sparse_feature_display, tr("Orb"));
   tab_widget->addTab(current_frame_combined_display, tr("Combined"));
   tab_widget->addTab(current_frame_color_display, tr("Color"));
   tab_widget->addTab(current_frame_depth_display, tr("Depth"));
+  
   
   QVBoxLayout* layout = new QVBoxLayout();
   layout->setContentsMargins(0, 0, 0, 0);
@@ -2028,6 +2034,12 @@ void MainWindow::UpdateCurrentFrameImages(int frame_index, bool images_in_use_el
   
   current_frame_color_display->SetImage(*rgb_image);
   current_frame_depth_display->SetImage(*depth_image);
+
+  cv::Mat cv_image = const_cast<Image<Vec3u8>*>(rgb_image)->WrapInCVMat(CV_8UC3).clone();
+  // cv::imwrite("/home/pang/badslam.png", cv_image);
+  Image<Vec3u8> rgb_image_from_cv;
+  rgb_image_from_cv.CopyFromCVMat(cv_image);
+  current_frame_sparse_feature_display->SetImage(rgb_image_from_cv);
   
   Image<Vec3u8> combined_image(depth_image->size());
   for (int y = 0; y < combined_image.height(); ++ y) {
@@ -2056,6 +2068,7 @@ void MainWindow::ShowCurrentFrameImagesOnceSLAMInitialized() {
     return;
   }
   if (bad_slam_set_) {
+    std::cout << "ShowCurrentFrameImages" << std::endl;
     ShowCurrentFrameImages();
     delete slam_init_timer_;
     slam_init_timer_ = nullptr;
