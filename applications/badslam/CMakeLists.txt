@@ -1,7 +1,7 @@
 if (CMAKE_CUDA_COMPILER)
   # Dependencies
   find_package(SuiteSparse REQUIRED)
-  find_package(DLib REQUIRED)
+  # find_package(DLib REQUIRED)
   find_package(Eigen3 REQUIRED)
   # find_package(g2o REQUIRED)
   find_package(OpenGL REQUIRED)
@@ -70,7 +70,7 @@ if (CMAKE_CUDA_COMPILER)
       # third_party/DBoW2/include/
       ${SuiteSparse_INCLUDE_DIRS}
       ${GLEW_INCLUDE_DIR}
-      ${DLib_INCLUDE_DIRS}
+      # ${DLib_INCLUDE_DIRS}
     PUBLIC
       third_party
       ${OpenCV_INCLUDE_DIRS}
@@ -105,8 +105,10 @@ if (CMAKE_CUDA_COMPILER)
       ${SuiteSparse_LIBRARIES}
       # g2o::stuff
       ${OpenCV_LIBS}
-      ${DLib_LIBS}
+      # ${DLib_LIBS}
       # DBoW2
+      ${PROJECT_SOURCE_DIR}/third_party/DBoW2/lib/libDBoW2.so
+      ${PROJECT_SOURCE_DIR}/third_party/g2o/lib/libg2o.so
       ${realsense2_LIBRARY}
       ${OPENGL_LIBRARY}
       ${GLEW_LIBRARIES}
