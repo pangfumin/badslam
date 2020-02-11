@@ -1046,7 +1046,7 @@ void MainWindow::MergeClosestSuccessiveKeyframes() {
       &ok);
   
   if (ok) {
-    bad_slam_->direct_ba().MergeKeyframes(0, bad_slam_->loop_detector(), approx_merge_count);
+    bad_slam_->direct_ba().MergeKeyframes(0, approx_merge_count);
     bad_slam_->direct_ba().UpdateBAVisualization(/*stream*/ 0);
     render_window_->RenderFrame();
     UpdateGPUMemoryUsage();
@@ -1535,7 +1535,8 @@ void MainWindow::ClickedKeyframe(int index) {
   }
   
   if (delete_keyframe_act->isChecked()) {
-    bad_slam_->direct_ba().DeleteKeyframe(index, bad_slam_->loop_detector());
+    // bad_slam_->direct_ba().DeleteKeyframe(index, bad_slam_->loop_detector());
+    bad_slam_->direct_ba().DeleteKeyframe(index);
     bad_slam_->direct_ba().UpdateBAVisualization(/*stream*/ 0);
     render_window_->RenderFrame();
   } else if (select_keyframe_act->isChecked()) {

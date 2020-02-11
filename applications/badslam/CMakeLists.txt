@@ -13,7 +13,7 @@ if (CMAKE_CUDA_COMPILER)
     find_package(X11 REQUIRED)
   endif()
 
-  add_subdirectory(third_party/DBoW2)
+  # add_subdirectory(third_party/DBoW2)
   
   find_package(opengv REQUIRED)
   
@@ -67,7 +67,7 @@ if (CMAKE_CUDA_COMPILER)
     PRIVATE
       src
       third_party/cub-1.8.0
-      third_party/DBoW2/include/
+      # third_party/DBoW2/include/
       ${SuiteSparse_INCLUDE_DIRS}
       ${GLEW_INCLUDE_DIR}
       ${DLib_INCLUDE_DIRS}
@@ -106,7 +106,7 @@ if (CMAKE_CUDA_COMPILER)
       g2o::stuff
       ${OpenCV_LIBS}
       ${DLib_LIBS}
-      DBoW2
+      # DBoW2
       ${realsense2_LIBRARY}
       ${OPENGL_LIBRARY}
       ${GLEW_LIBRARIES}
@@ -132,7 +132,7 @@ if (CMAKE_CUDA_COMPILER)
     src
     third_party
     third_party/cub-1.8.0
-    third_party/DBoW2/include/
+    # third_party/DBoW2/include/
     ${realsense_INCLUDE_DIR}
     ${GLEW_INCLUDE_DIR}
   )

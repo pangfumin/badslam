@@ -49,7 +49,7 @@ class DirectBA;
 template <typename T> class Image;
 template<typename T, typename PoseType> class ImageFrame;
 class Keyframe;
-class LoopDetector;
+// class LoopDetector;
 class OpenGLContext;
 template<typename ColorT, typename DepthT> class RGBDVideo;
 
@@ -177,8 +177,8 @@ class BadSlam {
   inline const DirectBA& direct_ba() const { return *direct_ba_; }
   inline DirectBA& direct_ba() { return *direct_ba_; }
   
-  // Access to the contained LoopDetector object.
-  inline LoopDetector* loop_detector() { return loop_detector_.get(); }
+  // // Access to the contained LoopDetector object.
+  // inline LoopDetector* loop_detector() { return loop_detector_.get(); }
   
   // Access to the RGBDVideo.
   inline RGBDVideo<Vec3u8, u16>* rgbd_video() const { return rgbd_video_; };
@@ -347,7 +347,7 @@ class BadSlam {
   // Bundle adjustment attributes.
   int num_planned_ba_iterations_ = 0;
   unique_ptr<DirectBA> direct_ba_;
-  unique_ptr<LoopDetector> loop_detector_;
+  // unique_ptr<LoopDetector> loop_detector_;
   
   // The input video. Points to externally managed memory.
   // TODO: Make this a shared_ptr?

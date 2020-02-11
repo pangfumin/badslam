@@ -51,7 +51,7 @@ namespace vis {
 class BadSlam;
 class BadSlamRenderWindow;
 template <typename T> class CUDABuffer;
-class LoopDetector;
+// class LoopDetector;
 class OpenGLContext;
 template <typename ColorT, typename DepthT> class RGBDVideo;
 class Timer;
@@ -97,15 +97,16 @@ class DirectBA {
   
   // Deletes a keyframe.
   void DeleteKeyframe(
-      int keyframe_index,
-      LoopDetector* loop_detector);
+      int keyframe_index
+      // LoopDetector* loop_detector
+      );
   
   // Merges keyframes to free up GPU memory.
   // NOTE: This leads to nullptr entries in the keyframes vector.
   // TODO: This is currently misnamed, since it does not merge keyframes but simply delete them.
   void MergeKeyframes(
       cudaStream_t stream,
-      LoopDetector* loop_detector,
+      // LoopDetector* loop_detector,
       usize approx_merge_count = 10);
   
   // Creates new surfels for the depth pixels of the given keyframe which do not

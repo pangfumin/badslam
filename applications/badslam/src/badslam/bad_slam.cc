@@ -37,12 +37,14 @@
 #include "badslam/cuda_image_processing.cuh"
 #include "badslam/kernels.cuh"
 #include "badslam/keyframe.h"
-#include "badslam/loop_detector.h"
+// #include "badslam/loop_detector.h"
+#include "libvis/opengl_context.h"
 #include "badslam/preprocessing.h"
 #include "badslam/surfel_projection.h"
 #include "badslam/trajectory_deformation.h"
 #include "badslam/util.cuh"
 #include "badslam/util.h"
+#include "badslam/render_window.h"
 
 namespace vis {
 
@@ -137,29 +139,29 @@ BadSlam::BadSlam(
           rgbd_video->depth_frame(config_.start_frame)->global_T_frame() :
           SE3f()));
   
-  if (config.enable_loop_detection) {
-    if (!boost::filesystem::exists(config.loop_detection_vocabulary_path)) {
-      LOG(ERROR) << "File given as config.loop_detection_vocabulary_path does not exist: " << config.loop_detection_vocabulary_path;
-      LOG(ERROR) << "Disabling loop detection!";
-      config_.enable_loop_detection = false;
-    } else if (!boost::filesystem::exists(config.loop_detection_pattern_path)) {
-      LOG(ERROR) << "File given as config.loop_detection_pattern_path does not exist: " << config.loop_detection_pattern_path;
-      LOG(ERROR) << "Disabling loop detection!";
-      config_.enable_loop_detection = false;
-    } else {
-      loop_detector_.reset(new LoopDetector(
-          config.loop_detection_vocabulary_path,
-          config.loop_detection_pattern_path,
-          config.loop_detection_images_width,
-          config.loop_detection_images_height,
-          config.raw_to_float_depth,
-          rgbd_video->depth_camera()->width(),
-          rgbd_video->depth_camera()->height(),
-          config.num_scales,
-          config.GetLoopDetectionImageFrequency(),
-          config.parallel_loop_detection));
-    }
-  }
+  // if (config.enable_loop_detection) {
+  //   if (!boost::filesystem::exists(config.loop_detection_vocabulary_path)) {
+  //     LOG(ERROR) << "File given as config.loop_detection_vocabulary_path does not exist: " << config.loop_detection_vocabulary_path;
+  //     LOG(ERROR) << "Disabling loop detection!";
+  //     config_.enable_loop_detection = false;
+  //   } else if (!boost::filesystem::exists(config.loop_detection_pattern_path)) {
+  //     LOG(ERROR) << "File given as config.loop_detection_pattern_path does not exist: " << config.loop_detection_pattern_path;
+  //     LOG(ERROR) << "Disabling loop detection!";
+  //     config_.enable_loop_detection = false;
+  //   } else {
+  //     loop_detector_.reset(new LoopDetector(
+  //         config.loop_detection_vocabulary_path,
+  //         config.loop_detection_pattern_path,
+  //         config.loop_detection_images_width,
+  //         config.loop_detection_images_height,
+  //         config.raw_to_float_depth,
+  //         rgbd_video->depth_camera()->width(),
+  //         rgbd_video->depth_camera()->height(),
+  //         config.num_scales,
+  //         config.GetLoopDetectionImageFrequency(),
+  //         config.parallel_loop_detection));
+  //   }
+  // }
   
   if (config.parallel_ba) {
     // Start a separate thread for bundle adjustment.
@@ -963,7 +965,8 @@ shared_ptr<Keyframe> BadSlam::CreateKeyframe(
   if (free_bytes < static_cast<usize>(config_.min_free_gpu_memory_mb) * 1024 * 1024 + kApproxKeyframeSize) {
     LOG(WARNING) << "The available GPU memory becomes low. Merging keyframes now, but be aware that this has received little testing and may lead to instability.";
     direct_ba_->Lock();
-    direct_ba_->MergeKeyframes(stream_, loop_detector_.get());
+    // direct_ba_->MergeKeyframes(stream_, loop_detector_.get());
+    direct_ba_->MergeKeyframes(stream_);
     direct_ba_->Unlock();
   }
   
@@ -1013,15 +1016,15 @@ shared_ptr<Keyframe> BadSlam::CreateKeyframe(
   
   cv::Mat_<u8> gray_image;
   
-  if (loop_detector_) {
-    gray_image = CreateGrayImageForLoopDetection(*rgb_image);
+  // if (loop_detector_) {
+  //   gray_image = CreateGrayImageForLoopDetection(*rgb_image);
     
-    if (config_.parallel_loop_detection) {
-      loop_detector_->QueueForLoopDetection(gray_image, depth_image);
-      gray_image.release();
-      CHECK(gray_image.empty());
-    }
-  }
+  //   if (config_.parallel_loop_detection) {
+  //     loop_detector_->QueueForLoopDetection(gray_image, depth_image);
+  //     gray_image.release();
+  //     CHECK(gray_image.empty());
+  //   }
+  // }
   
   int keyframes_added;
   if (config_.parallel_ba) {
@@ -1132,29 +1135,29 @@ void BadSlam::AddKeyframeToBA(
   DepthParameters depth_params = direct_ba_->depth_params_no_lock();
   direct_ba_->Unlock();
   
-  // Check for loops.
-  if (loop_detector_) {
-    PinholeCamera4f* full_scale_color_camera = color_camera.Scaled(powf(2, config_.pyramid_level_for_color));
+  // // Check for loops.
+  // if (loop_detector_) {
+  //   PinholeCamera4f* full_scale_color_camera = color_camera.Scaled(powf(2, config_.pyramid_level_for_color));
     
-    // NOTE: This uses the raw depth image without any bilinear filtering or correction.
-    loop_detector_->AddImage(
-        stream,
-        config_.start_frame,
-        last_frame_index_,  // TODO: This should use the most current value in the parallel case, not the one which was most current at the start of this function call!
-        rgbd_video_,
-        color_camera,
-        depth_camera,
-        depth_params,
-        *full_scale_color_camera,
-        gray_image,
-        depth_image,
-        render_window_,
-        *new_keyframe,
-        &pairwise_tracking_buffers_for_loops_,
-        direct_ba_.get());
+  //   // NOTE: This uses the raw depth image without any bilinear filtering or correction.
+  //   loop_detector_->AddImage(
+  //       stream,
+  //       config_.start_frame,
+  //       last_frame_index_,  // TODO: This should use the most current value in the parallel case, not the one which was most current at the start of this function call!
+  //       rgbd_video_,
+  //       color_camera,
+  //       depth_camera,
+  //       depth_params,
+  //       *full_scale_color_camera,
+  //       gray_image,
+  //       depth_image,
+  //       render_window_,
+  //       *new_keyframe,
+  //       &pairwise_tracking_buffers_for_loops_,
+  //       direct_ba_.get());
     
-    delete full_scale_color_camera;
-  }
+  //   delete full_scale_color_camera;
+  // }
 }
 
 void BadSlam::StartParallelIterations(

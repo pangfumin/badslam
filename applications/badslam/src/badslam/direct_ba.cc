@@ -44,7 +44,7 @@
 #include "badslam/bad_slam.h"
 #include "badslam/convergence_analysis.h"
 #include "badslam/util.cuh"
-#include "badslam/loop_detector.h"
+// #include "badslam/loop_detector.h"
 #include "badslam/pose_graph_optimizer.h"
 #include "badslam/robust_weighting.cuh"
 #include "badslam/util.h"
@@ -201,8 +201,7 @@ void DirectBA::AddKeyframe(
 }
 
 void DirectBA::DeleteKeyframe(
-    int keyframe_index,
-    LoopDetector* loop_detector) {
+    int keyframe_index) {
   // TODO: Re-use the deleted keyframe's buffers for new keyframes, since
   //       CUDA memory allocation is very slow.
   shared_ptr<Keyframe> frame_to_delete = keyframes_[keyframe_index];
@@ -219,9 +218,9 @@ void DirectBA::DeleteKeyframe(
   
   keyframes_[keyframe_index].reset();
   
-  if (loop_detector) {
-    loop_detector->RemoveImage(keyframe_index);
-  }
+  // if (loop_detector) {
+  //   loop_detector->RemoveImage(keyframe_index);
+  // }
 }
 
 void DirectBA::DetermineNewKeyframeCoVisibility(const shared_ptr<Keyframe>& new_keyframe) {
@@ -246,7 +245,7 @@ void DirectBA::DetermineNewKeyframeCoVisibility(const shared_ptr<Keyframe>& new_
 
 void DirectBA::MergeKeyframes(
     cudaStream_t /*stream*/,
-    LoopDetector* loop_detector,
+    // LoopDetector* loop_detector,
     usize approx_merge_count) {
   // TODO: Make parameters:
   constexpr float kMaxAngleDifference = 0.5f * M_PI_2;
@@ -307,9 +306,9 @@ void DirectBA::MergeKeyframes(
   usize number_of_sorted_distances = std::min(approx_merge_count, distances.size());
   std::partial_sort(distances.begin(), distances.begin() + number_of_sorted_distances, distances.end());
   
-  if (loop_detector) {
-    loop_detector->LockDetectorMutex();
-  }
+  // if (loop_detector) {
+  //   loop_detector->LockDetectorMutex();
+  // }
   
   for (usize i = 0; i < number_of_sorted_distances; ++ i) {
     const MergeKeyframeDistance& merge = distances[i];
@@ -323,14 +322,15 @@ void DirectBA::MergeKeyframes(
     // TODO: Actually merge the frame into the other (and possibly other
     //       frames with co-visibility). At the moment, the frame is simply
     //       deleted.
-    DeleteKeyframe(merge.keyframe_id, loop_detector);
+    // DeleteKeyframe(merge.keyframe_id, loop_detector);
+    DeleteKeyframe(merge.keyframe_id);
     
     LOG(ERROR) << "Deleted keyframe with ID " << merge.keyframe_id;
   }
   
-  if (loop_detector) {
-    loop_detector->UnlockDetectorMutex();
-  }
+  // if (loop_detector) {
+  //   loop_detector->UnlockDetectorMutex();
+  // }
 }
 
 void DirectBA::CreateSurfelsForKeyframe(
