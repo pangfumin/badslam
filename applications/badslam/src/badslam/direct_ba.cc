@@ -45,9 +45,10 @@
 #include "badslam/convergence_analysis.h"
 #include "badslam/util.cuh"
 // #include "badslam/loop_detector.h"
-#include "badslam/pose_graph_optimizer.h"
+// #include "badslam/pose_graph_optimizer.h"
 #include "badslam/robust_weighting.cuh"
 #include "badslam/util.h"
+#include "badslam/render_window.h"
 
 
 namespace vis {
