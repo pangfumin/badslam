@@ -4,6 +4,8 @@ project(DBoW2)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}  -Wall  -O3 -march=native ")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall  -O3 -march=native")
 
+
+
 set(HDRS_DBOW2
   DBoW2/BowVector.h
   DBoW2/FORB.h 
@@ -32,9 +34,23 @@ if(NOT OpenCV_FOUND)
    endif()
 endif()
 
-set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
+# set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
+set(DEPENDENCY_DIR ${CMAKE_CURRENT_BINARY_DIR}/dependencies)
+set(DEPENDENCY_INSTALL_DIR ${DEPENDENCY_DIR}/install)
 
 include_directories(${OpenCV_INCLUDE_DIRS})
 add_library(DBoW2 SHARED ${SRCS_DBOW2} ${SRCS_DUTILS})
 target_link_libraries(DBoW2 ${OpenCV_LIBS})
+target_compile_definitions(${PROJECT_NAME} PRIVATE DBOW_EXPORT)
+
+configure_file(DBoW2/DBoW2.cmake.in
+  "${PROJECT_BINARY_DIR}/DBoW2Config.cmake" @ONLY)
+
+install(TARGETS ${PROJECT_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
+install(DIRECTORY include/DBoW2 DESTINATION ${CMAKE_INSTALL_PREFIX}/include)
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/DBoW2Config.cmake"
+  DESTINATION ${CMAKE_INSTALL_PREFIX}/include/${PROJECT_NAME})
+install(FILES "${PROJECT_BINARY_DIR}/DBoW2Config.cmake" 
+  DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/cmake/DBoW2/)
+install(DIRECTORY ${DEPENDENCY_INSTALL_DIR}/ DESTINATION ${CMAKE_INSTALL_PREFIX} OPTIONAL)
 

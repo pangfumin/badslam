@@ -46,6 +46,8 @@
 #include "badslam/util.h"
 #include "badslam/render_window.h"
 
+// #include "ORBVocabulary.h"
+
 namespace vis {
 
 BadSlam::BadSlam(
@@ -65,6 +67,18 @@ BadSlam::BadSlam(
       render_window_(render_window),
       opengl_context_(opengl_context),
       config_(config) {
+
+// for testing DBoW2 link
+    // std::string strVocFile = "/home/pang/disk/software/ORB_SLAM2/Vocabulary/ORBvoc.txt";
+    // ORB_SLAM2::ORBVocabulary* mpVocabulary = new ORB_SLAM2::ORBVocabulary();
+    // bool bVocLoad = mpVocabulary->loadFromTextFile(strVocFile);
+    // if(!bVocLoad)
+    // {
+    //     cerr << "Wrong path to vocabulary. " << endl;
+    //     cerr << "Falied to open at: " << strVocFile << endl;
+    //     exit(-1);
+    // }
+
   valid_ = true;
   
   // Initialize CUDA stream(s).

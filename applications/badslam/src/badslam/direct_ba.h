@@ -44,6 +44,8 @@
 #include "badslam/kernels.h"
 #include "badslam/keyframe.h"
 
+
+
 // #define DEBUG_LOCKING
 
 namespace vis {
