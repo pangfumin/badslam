@@ -117,6 +117,8 @@ public:
     std::vector<MapPoint*> GetTrackedMapPoints();
     std::vector<cv::KeyPoint> GetTrackedKeyPointsUn();
 
+    Tracking* GetTracker() const { return mpTracker; }
+
 private:
 
     // Input sensor

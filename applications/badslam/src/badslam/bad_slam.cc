@@ -47,6 +47,7 @@
 #include "badslam/render_window.h"
 
 #include "badslam/System.h"
+#include "badslam/Converter.h"
 
 
 
@@ -381,7 +382,15 @@ void BadSlam::UpdateOdometryVisualization(
   if (ba_thread_) {
     render_window_->SetQueuedKeyframePosesNoLock(std::move(keyframe_poses), std::move(keyframe_ids));
   }
-  render_window_->SetCurrentFramePoseNoLock(rgbd_video_->depth_frame(frame_index)->global_T_frame().matrix());
+
+
+  // Note:(pang) set current pose from orbslam, other elements still need change
+  // render_window_->SetCurrentFramePoseNoLock(rgbd_video_->depth_frame(frame_index)->global_T_frame().matrix());
+  cv::Mat Tcw = orbslam_system_->GetTracker()->mCurrentFrame.GetTcw();
+  Sophus::SE3f pose = ORB_SLAM2::Converter::toSophusSE3(Tcw).cast<float>().inverse();  // show Twc
+  render_window_->SetCurrentFramePoseNoLock(pose.matrix());
+
+
   render_window_->SetEstimatedTrajectoryNoLock(std::move(estimated_trajectory));
   
   render_mutex_lock.unlock();
