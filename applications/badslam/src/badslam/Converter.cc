@@ -46,6 +46,18 @@ g2o::SE3Quat Converter::toSE3Quat(const cv::Mat &cvT)
     return g2o::SE3Quat(R,t);
 }
 
+Sophus::SE3d Converter::toSophusSE3(const cv::Mat &cvT) {
+    Eigen::Matrix<double,3,3> R;
+    R << cvT.at<float>(0,0), cvT.at<float>(0,1), cvT.at<float>(0,2),
+         cvT.at<float>(1,0), cvT.at<float>(1,1), cvT.at<float>(1,2),
+         cvT.at<float>(2,0), cvT.at<float>(2,1), cvT.at<float>(2,2);
+
+    Eigen::Matrix<double,3,1> t(cvT.at<float>(0,3), cvT.at<float>(1,3), cvT.at<float>(2,3));
+
+    return Sophus::SE3d(R, t);
+
+}
+
 cv::Mat Converter::toCvMat(const g2o::SE3Quat &SE3)
 {
     Eigen::Matrix<double,4,4> eigMat = SE3.to_homogeneous_matrix();

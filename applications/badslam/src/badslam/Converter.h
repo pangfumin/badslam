@@ -22,6 +22,7 @@
 #define CONVERTER_H
 
 #include<opencv2/core/core.hpp>
+#include <sophus/se3.hpp>
 
 #include<Eigen/Dense>
 #include"g2o/types/types_six_dof_expmap.h"
@@ -50,6 +51,9 @@ public:
     static Eigen::Matrix<double,3,3> toMatrix3d(const cv::Mat &cvMat3);
 
     static std::vector<float> toQuaternion(const cv::Mat &M);
+
+    // sophus
+    static Sophus::SE3d toSophusSE3(const cv::Mat &cvT);
 };
 
 }// namespace ORB_SLAM

@@ -339,6 +339,7 @@ BadSlam::~BadSlam() {
 
   //orbslam
   orbslam_system_->Shutdown();
+  orbslam_system_->SaveTrajectoryTUM("/home/pang/CameraTrajectory.txt");
 }
 
 void BadSlam::UpdateOdometryVisualization(
