@@ -37,7 +37,7 @@
 #include "LoopClosing.h"
 #include "KeyFrameDatabase.h"
 #include "ORBVocabulary.h"
-#include "Viewer.h"
+// #include "Viewer.h"
 
 namespace ORB_SLAM2
 {
@@ -152,7 +152,7 @@ private:
     LoopClosing* mpLoopCloser;
 
     // The viewer draws the map and the current camera pose. It uses Pangolin.
-    Viewer* mpViewer;
+    // Viewer* mpViewer;
 
     FrameDrawer* mpFrameDrawer;
     MapDrawer* mpMapDrawer;

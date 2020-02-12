@@ -25,7 +25,7 @@
 #include<opencv2/core/core.hpp>
 #include<opencv2/features2d/features2d.hpp>
 
-#include"Viewer.h"
+// #include"Viewer.h"
 #include"FrameDrawer.h"
 #include"Map.h"
 #include"LocalMapping.h"
@@ -174,7 +174,7 @@ protected:
     System* mpSystem;
     
     //Drawers
-    Viewer* mpViewer;
+    // Viewer* mpViewer;
     FrameDrawer* mpFrameDrawer;
     MapDrawer* mpMapDrawer;
 
