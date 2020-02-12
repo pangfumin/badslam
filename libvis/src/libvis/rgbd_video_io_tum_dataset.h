@@ -276,12 +276,12 @@ bool ReadTUMRGBDDatasetAssociatedAndCalibrated(
   }
 
   // load imu measurements
-  string imu_filepath =
-        string(dataset_folder_path) + "/" + "imu.txt";
+  // string imu_filepath =
+  //       string(dataset_folder_path) + "/" + "imu.txt";
 
-  if (!ReadImuMeas(imu_filepath.c_str(), rgbd_video->imu_timestamps_mutable(), rgbd_video->imu_frames_mutable())) {
-      return false;
-  }
+  // if (!ReadImuMeas(imu_filepath.c_str(), rgbd_video->imu_timestamps_mutable(), rgbd_video->imu_frames_mutable())) {
+  //     return false;
+  // }
 
  
   
