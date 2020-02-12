@@ -188,7 +188,7 @@ void BadSlam::ProcessFrame(int frame_index, bool force_keyframe) {
   // not cached yet).
   const Image<Vec3u8>* rgb_image =
       rgbd_video_->color_frame_mutable(frame_index)->GetImage().get();
-  /*const shared_ptr<Image<u16>>& depth_image =*/
+  const shared_ptr<Image<u16>>& depth_image =
       rgbd_video_->depth_frame_mutable(frame_index)->GetImage();
 
   vis::Time color_ts = rgbd_video_->color_ts_mutable(frame_index);
@@ -296,6 +296,22 @@ void BadSlam::ProcessFrame(int frame_index, bool force_keyframe) {
       }
     }
   }
+
+
+  // orbslam
+
+  // Pass the image to the SLAM system
+  cv::Mat imRGB = const_cast<Image<Vec3u8>*>(rgb_image)->WrapInCVMat(CV_8UC3).clone();
+  cv::cvtColor(imRGB, imRGB, CV_BGR2RGB);
+
+   const Image<u16>* local_depth_image =
+      rgbd_video_->depth_frame_mutable(frame_index)->GetImage().get();
+  cv::Mat imD = const_cast<Image<u16>*>(local_depth_image)->WrapInCVMat(CV_16UC1).clone();
+  // cv::imshow("image" , imD);
+  // cv::waitKey(2);
+  
+  orbslam_system_->TrackRGBD(imRGB,imD,0);
+
 }
 
 BadSlam::~BadSlam() {
@@ -319,6 +335,10 @@ BadSlam::~BadSlam() {
   cudaEventDestroy(update_visualization_post_event_);
   
   cudaStreamDestroy(stream_);
+
+
+  //orbslam
+  orbslam_system_->Shutdown();
 }
 
 void BadSlam::UpdateOdometryVisualization(

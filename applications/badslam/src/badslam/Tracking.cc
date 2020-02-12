@@ -269,6 +269,7 @@ cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp)
 
 void Tracking::Track()
 {
+
     if(mState==NO_IMAGES_YET)
     {
         mState = NOT_INITIALIZED;
