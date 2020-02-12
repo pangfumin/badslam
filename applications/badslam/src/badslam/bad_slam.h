@@ -42,6 +42,11 @@
 #include "badslam/kernels.h"
 #include "badslam/pairwise_frame_tracking.h"
 
+
+namespace ORB_SLAM2{
+  class System;
+}
+
 namespace vis {
 
 class BadSlamRenderWindow;
@@ -360,6 +365,10 @@ class BadSlam {
   
   bool valid_;
   BadSlamConfig config_;
+
+
+  // orbslam
+  std::shared_ptr<ORB_SLAM2::System> orbslam_system_;
 };
 
 }
