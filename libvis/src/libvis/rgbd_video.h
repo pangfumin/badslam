@@ -33,6 +33,7 @@
 #include "libvis/image_frame.h"
 #include "libvis/libvis.h"
 #include "libvis/sophus.h"
+#include "libvis/Time.hpp"
 
 namespace vis {
 
@@ -42,6 +43,7 @@ class RGBDVideo {
   typedef ImageFrameConstPtr<ColorT, SE3f> ConstColorFrame;
   typedef ImageFramePtr<ColorT, SE3f> ColorFrame;
   typedef vector<ColorFrame> ColorFramesVector;
+  typedef Eigen::Matrix<double,6,1> Imu;
   
   typedef ImageFrameConstPtr<DepthT, SE3f> ConstDepthFrame;
   typedef ImageFramePtr<DepthT, SE3f> DepthFrame;
@@ -56,18 +58,32 @@ class RGBDVideo {
   inline usize frame_count() const { return color_frames_.size(); }
   
   inline ColorFramesVector* color_frames_mutable() { return &color_frames_; }
+  inline std::vector<Time>* color_timestamps_mutable() { return &color_timestamps_; }
   inline ConstColorFrame color_frame(int i) const { return color_frames_.at(i); }
   inline ColorFrame& color_frame_mutable(int i) { return color_frames_.at(i); }
+  inline Time& color_ts_mutable(int i) { return color_timestamps_.at(i); }
   
   inline DepthFramesVector* depth_frames_mutable() { return &depth_frames_; }
+  inline std::vector<Time>* depth_timestamps_mutable() { return &depth_timestamps_; }
   inline ConstDepthFrame depth_frame(int i) const { return depth_frames_.at(i); }
   inline DepthFrame& depth_frame_mutable(int i) { return depth_frames_.at(i); }
+  inline Time& depth_ts_mutable(int i) { return depth_timestamps_.at(i); }
+
+
+  inline std::vector<Imu>* imu_frames_mutable() { return &imu_frames_; }
+  inline std::vector<Time>* imu_timestamps_mutable() { return &imu_timestamps_; }
+  inline const Imu  imu_frame(int i) const { return imu_frames_.at(i); }
+  inline Imu& imu_frame_mutable(int i) { return imu_frames_.at(i); }
   
  private:
   shared_ptr<Camera> color_camera_;
   ColorFramesVector color_frames_;
+  std::vector<Time> color_timestamps_;
   shared_ptr<Camera> depth_camera_;
   DepthFramesVector depth_frames_;
+  std::vector<Time> depth_timestamps_;
+  std::vector<Imu> imu_frames_;
+  std::vector<Time> imu_timestamps_;
 };
 
 }

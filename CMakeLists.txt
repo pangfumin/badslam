@@ -312,6 +312,8 @@ set(LIBVIS_FILES
   libvis/src/libvis/timing.cc
   libvis/src/libvis/timing.h
   libvis/src/libvis/util.h
+  libvis/src/libvis/Duration.hpp
+  libvis/src/libvis/Time.hpp
   
   ${GENERATED_HEADERS}
   libvis/resources/resources.qrc
