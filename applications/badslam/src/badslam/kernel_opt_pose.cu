@@ -93,6 +93,67 @@ __forceinline__ __device__ void ComputeRawDepthResidualAndJacobian(
   jacobian[5] = depth_residual_inv_stddev * (-surfel_local_normal.x * local_unproj.y + surfel_local_normal.y * local_unproj.x);
 }
 
+__forceinline__ __device__ void ComputeRawDepthResidualAndJacobian(
+    const PixelCenterUnprojector& unprojector,
+    int px,
+    int py,
+    float pixel_calibrated_depth,
+    float depth_residual_inv_stddev,
+    const CUDAMatrix3x4& gtf, //  T_WC
+    const float3& surfel_global_position,
+    const float3& surfel_global_normal,
+    const float3& surfel_local_position,
+    const float3& surfel_local_normal,
+    float* raw_residual,
+    float* jacobian) {
+  float3 local_unproj;
+  ComputeRawDepthResidual(unprojector, px, py, pixel_calibrated_depth,
+                          depth_residual_inv_stddev,
+                          surfel_local_position, surfel_local_normal,
+                          &local_unproj, raw_residual);
+  
+  // Compute Jacobian of residual.
+  
+//   // Old version for exp(hat(T)) * global_T_frame:
+//   jacobian[0] = surfel_global_normal.x;
+//   jacobian[1] = surfel_global_normal.y;
+//   jacobian[2] = surfel_global_normal.z;
+//   jacobian[3] = surfel_global_position.y * surfel_global_normal.z - surfel_global_position.z * surfel_global_normal.y;
+//   jacobian[4] = -surfel_global_position.x * surfel_global_normal.z + surfel_global_position.z * surfel_global_normal.x;
+//   jacobian[5] = surfel_global_position.x * surfel_global_normal.y - surfel_global_position.y * surfel_global_normal.x;
+  
+  // New version for global_T_frame * exp(hat(T)):
+  jacobian[0] = gtf.row0.x*surfel_global_normal.x + gtf.row1.x*surfel_global_normal.y + gtf.row2.x*surfel_global_normal.z;
+  jacobian[0] *= depth_residual_inv_stddev;
+  jacobian[1] = gtf.row0.y*surfel_global_normal.x + gtf.row1.y*surfel_global_normal.y + gtf.row2.y*surfel_global_normal.z;
+  jacobian[1] *= depth_residual_inv_stddev;
+  jacobian[2] = gtf.row0.z*surfel_global_normal.x + gtf.row1.z*surfel_global_normal.y + gtf.row2.z*surfel_global_normal.z;
+  jacobian[2] *= depth_residual_inv_stddev;
+  jacobian[3] = - surfel_global_normal.x*(gtf.row0.y*local_unproj.z - gtf.row0.z*local_unproj.y)
+                - surfel_global_normal.y*(gtf.row1.y*local_unproj.z - gtf.row1.z*local_unproj.y)
+                - surfel_global_normal.z*(gtf.row2.y*local_unproj.z - gtf.row2.z*local_unproj.y);
+  jacobian[3] *= depth_residual_inv_stddev;
+  jacobian[4] =   surfel_global_normal.x*(gtf.row0.x*local_unproj.z - gtf.row0.z*local_unproj.x)
+                + surfel_global_normal.y*(gtf.row1.x*local_unproj.z - gtf.row1.z*local_unproj.x)
+                + surfel_global_normal.z*(gtf.row2.x*local_unproj.z - gtf.row2.z*local_unproj.x);
+  jacobian[4] *= depth_residual_inv_stddev;
+  jacobian[5] = - surfel_global_normal.x*(gtf.row0.x*local_unproj.y - gtf.row0.y*local_unproj.x)
+                - surfel_global_normal.y*(gtf.row1.x*local_unproj.y - gtf.row1.y*local_unproj.x)
+                - surfel_global_normal.z*(gtf.row2.x*local_unproj.y - gtf.row2.y*local_unproj.x);
+  jacobian[5] *= depth_residual_inv_stddev;
+  
+  // Simplified form of the new version above by rotating all the vectors into
+  // the local frame (which does not change the values of the dot products),
+  // i.e., multiplying by frame_tr_global from the left side:
+  // jacobian[0] = depth_residual_inv_stddev * surfel_local_normal.x;
+  // jacobian[1] = depth_residual_inv_stddev * surfel_local_normal.y;
+  // jacobian[2] = depth_residual_inv_stddev * surfel_local_normal.z;
+  // jacobian[3] = depth_residual_inv_stddev * (-surfel_local_normal.y * local_unproj.z + surfel_local_normal.z * local_unproj.y);
+  // jacobian[4] = depth_residual_inv_stddev * ( surfel_local_normal.x * local_unproj.z - surfel_local_normal.z * local_unproj.x);
+  // jacobian[5] = depth_residual_inv_stddev * (-surfel_local_normal.x * local_unproj.y + surfel_local_normal.y * local_unproj.x);
+}
+
+
 __forceinline__ __device__ void ComputeRawDescriptorResidualAndJacobian(
     const PixelCenterProjector& color_center_projector,
     cudaTextureObject_t color_texture,
@@ -291,12 +352,17 @@ __global__ void AccumulatePoseEstimationCoeffsCUDAKernel(
     float depth_residual_inv_stddev =
         ComputeDepthResidualInvStddevEstimate(depth_unprojector.nx(r.px), depth_unprojector.ny(r.py), r.pixel_calibrated_depth, surfel_local_normal, s.depth_params.baseline_fx);
     
+    CUDAMatrix3x4 gtf;
+    gtf.FromInverse(s.frame_T_global);
     ComputeRawDepthResidualAndJacobian(
         depth_unprojector,
         r.px,
         r.py,
         r.pixel_calibrated_depth,
         depth_residual_inv_stddev,
+        gtf, // T_WC
+        r.surfel_global_position,
+        r.surfel_normal, // global
         r.surfel_local_position,
         surfel_local_normal,
         &raw_residual,
