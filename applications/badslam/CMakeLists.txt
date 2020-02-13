@@ -150,6 +150,7 @@ if (CMAKE_CUDA_COMPILER)
   
   # Unit test.
   add_executable(badslam_test
+    src/badslam/test/test_g2o_evaluate_callback_curve_fit.cc
     src/badslam/test/test_geometry_optimization_geometric_residual.cc
     src/badslam/test/test_geometry_optimization_photometric_residual.cc
     src/badslam/test/test_intrinsics_optimization_geometric_residual.cc
