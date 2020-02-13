@@ -115,33 +115,41 @@ __forceinline__ __device__ void ComputeRawDepthResidualAndJacobian(
   // Compute Jacobian of residual.
   
 //   // Old version for exp(hat(T)) * global_T_frame:
-//   jacobian[0] = surfel_global_normal.x;
-//   jacobian[1] = surfel_global_normal.y;
-//   jacobian[2] = surfel_global_normal.z;
-//   jacobian[3] = surfel_global_position.y * surfel_global_normal.z - surfel_global_position.z * surfel_global_normal.y;
-//   jacobian[4] = -surfel_global_position.x * surfel_global_normal.z + surfel_global_position.z * surfel_global_normal.x;
-//   jacobian[5] = surfel_global_position.x * surfel_global_normal.y - surfel_global_position.y * surfel_global_normal.x;
   
-  // New version for global_T_frame * exp(hat(T)):
-  jacobian[0] = - surfel_global_normal.x*(gtf.row0.y*local_unproj.z - gtf.row0.z*local_unproj.y)
-                - surfel_global_normal.y*(gtf.row1.y*local_unproj.z - gtf.row1.z*local_unproj.y)
-                - surfel_global_normal.z*(gtf.row2.y*local_unproj.z - gtf.row2.z*local_unproj.y);
+  jacobian[0] = surfel_global_position.y * surfel_global_normal.z - surfel_global_position.z * surfel_global_normal.y;
   jacobian[0] *= depth_residual_inv_stddev;
-  jacobian[1] =   surfel_global_normal.x*(gtf.row0.x*local_unproj.z - gtf.row0.z*local_unproj.x)
-                + surfel_global_normal.y*(gtf.row1.x*local_unproj.z - gtf.row1.z*local_unproj.x)
-                + surfel_global_normal.z*(gtf.row2.x*local_unproj.z - gtf.row2.z*local_unproj.x);
+  jacobian[1] = -surfel_global_position.x * surfel_global_normal.z + surfel_global_position.z * surfel_global_normal.x;
   jacobian[1] *= depth_residual_inv_stddev;
-  jacobian[2] = - surfel_global_normal.x*(gtf.row0.x*local_unproj.y - gtf.row0.y*local_unproj.x)
-                - surfel_global_normal.y*(gtf.row1.x*local_unproj.y - gtf.row1.y*local_unproj.x)
-                - surfel_global_normal.z*(gtf.row2.x*local_unproj.y - gtf.row2.y*local_unproj.x);
+  jacobian[2] = surfel_global_position.x * surfel_global_normal.y - surfel_global_position.y * surfel_global_normal.x;
   jacobian[2] *= depth_residual_inv_stddev;
-
-  jacobian[3] = gtf.row0.x*surfel_global_normal.x + gtf.row1.x*surfel_global_normal.y + gtf.row2.x*surfel_global_normal.z;
+  jacobian[3] = surfel_global_normal.x;
   jacobian[3] *= depth_residual_inv_stddev;
-  jacobian[4] = gtf.row0.y*surfel_global_normal.x + gtf.row1.y*surfel_global_normal.y + gtf.row2.y*surfel_global_normal.z;
+  jacobian[4] = surfel_global_normal.y;
   jacobian[4] *= depth_residual_inv_stddev;
-  jacobian[5] = gtf.row0.z*surfel_global_normal.x + gtf.row1.z*surfel_global_normal.y + gtf.row2.z*surfel_global_normal.z;
+  jacobian[5] = surfel_global_normal.z;
   jacobian[5] *= depth_residual_inv_stddev;
+  
+  
+  // // New version for global_T_frame * exp(hat(T)):
+  // jacobian[0] = - surfel_global_normal.x*(gtf.row0.y*local_unproj.z - gtf.row0.z*local_unproj.y)
+  //               - surfel_global_normal.y*(gtf.row1.y*local_unproj.z - gtf.row1.z*local_unproj.y)
+  //               - surfel_global_normal.z*(gtf.row2.y*local_unproj.z - gtf.row2.z*local_unproj.y);
+  // jacobian[0] *= depth_residual_inv_stddev;
+  // jacobian[1] =   surfel_global_normal.x*(gtf.row0.x*local_unproj.z - gtf.row0.z*local_unproj.x)
+  //               + surfel_global_normal.y*(gtf.row1.x*local_unproj.z - gtf.row1.z*local_unproj.x)
+  //               + surfel_global_normal.z*(gtf.row2.x*local_unproj.z - gtf.row2.z*local_unproj.x);
+  // jacobian[1] *= depth_residual_inv_stddev;
+  // jacobian[2] = - surfel_global_normal.x*(gtf.row0.x*local_unproj.y - gtf.row0.y*local_unproj.x)
+  //               - surfel_global_normal.y*(gtf.row1.x*local_unproj.y - gtf.row1.y*local_unproj.x)
+  //               - surfel_global_normal.z*(gtf.row2.x*local_unproj.y - gtf.row2.y*local_unproj.x);
+  // jacobian[2] *= depth_residual_inv_stddev;
+
+  // jacobian[3] = gtf.row0.x*surfel_global_normal.x + gtf.row1.x*surfel_global_normal.y + gtf.row2.x*surfel_global_normal.z;
+  // jacobian[3] *= depth_residual_inv_stddev;
+  // jacobian[4] = gtf.row0.y*surfel_global_normal.x + gtf.row1.y*surfel_global_normal.y + gtf.row2.y*surfel_global_normal.z;
+  // jacobian[4] *= depth_residual_inv_stddev;
+  // jacobian[5] = gtf.row0.z*surfel_global_normal.x + gtf.row1.z*surfel_global_normal.y + gtf.row2.z*surfel_global_normal.z;
+  // jacobian[5] *= depth_residual_inv_stddev;
   
   
   // Simplified form of the new version above by rotating all the vectors into

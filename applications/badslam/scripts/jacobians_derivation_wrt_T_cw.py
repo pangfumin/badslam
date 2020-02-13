@@ -167,7 +167,7 @@ if __name__ == '__main__':
   init_printing()
   
   # Depth residual (with deltas T_WC):
-  # inv_sigma * dot(surfel_normal, global_T_frame * exp(hat(T)) * unproject(x, y, correct(x, y, depth)) - surfel_pos)
+  # inv_sigma * dot(surfel_normal,  exp(hat(T))* global_T_frame  * unproject(x, y, correct(x, y, depth)) - surfel_pos)
   #
 
 
@@ -210,12 +210,11 @@ if __name__ == '__main__':
     # TODO: multiplication with inv_sigma is not included here!
     
     # Jacobian of depth residual wrt. global_T_frame changes (using delta: T):
-    # dot(surfel_normal, global_T_frame * exp(hat(T)) * unproject(x, y, correct(depth)) - surfel_pos)
+    # dot(surfel_normal,  exp(hat(T)) * global_T_frame  * unproject(x, y, correct(depth)) - surfel_pos)
     print('### Jacobian of depth residual wrt. global_T_frame changes ###')
     functions = [lambda point: DotProduct3(surfel_normal, point),
                  lambda point : point - surfel_pos,
-                 lambda point : MatrixVectorMultiplyHomogeneous(global_T_frame, point),
-                 lambda matrix : MatrixVectorMultiplyHomogeneous(matrix, local_point),
+                 lambda matrix : MatrixVectorMultiplyHomogeneous(matrix, global_point),
                  SE3exp]
     parameters = Matrix(6, 1, lambda i,j:var('T_%d' % (i)))
     parameter_values = zeros(6, 1)
