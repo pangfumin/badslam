@@ -213,8 +213,8 @@ repeat_pose_estimation:;
     constexpr float kDamping = 1.f;
     Eigen::Matrix<float, 6, 1> delta;
     delta << x.tail<3>(), x.head<3>();
-    global_T_frame_estimate =  SE3f::exp(-kDamping * delta) * global_T_frame_estimate;
-    
+    frame_T_global_estimate =  SE3f::exp(-kDamping * delta) * frame_T_global_estimate;
+    global_T_frame_estimate = frame_T_global_estimate.inverse();
     if (kDebug) {
       LOG(INFO) << "Debug: camera position: " << global_T_frame_estimate.translation().transpose();
       if (render_window_) {
