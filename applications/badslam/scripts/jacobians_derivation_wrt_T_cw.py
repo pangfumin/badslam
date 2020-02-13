@@ -80,7 +80,7 @@ def SO3exp(omega):
   return QuaternionToRotationMatrix([qw, qx, qy, qz])
 
 
-# Implementation of Sophus::SE3Group<Scalar> exp().
+# Implementation of g2o::SE3Quat exp().
 # Only implementing the first case (of small rotation) since we take the Jacobian at zero.
 def SE3exp(tangent):
   omega = Matrix(tangent[0:3])
@@ -170,9 +170,7 @@ if __name__ == '__main__':
   # inv_sigma * dot(surfel_normal, global_T_frame * exp(hat(T)) * unproject(x, y, correct(x, y, depth)) - surfel_pos)
   #
 
-  # Depth residual (with deltas T_WC and t):
-  # inv_sigma * dot(surfel_normal, SE3Inverse(exp(hat(T))) * frame_T_global  * unproject(x, y, correct(x, y, depth)) - surfel_pos)
-  #
+
 
   
   # Define variables
@@ -225,33 +223,6 @@ if __name__ == '__main__':
     print('')
     print('')
     
-   
-  
-  
-  # Descriptor residual based on gradient magnitude (gradmag; with deltas T and t):
-  # NOTE: The SE3Inverse() makes this T delta the same as in the depth
-  #       residual above such that both types of residuals can be combined. It
-  #       could be read "old_frame_T_new_frame".
-  # interp_bilinear(gradmag_image, Project(SE3Inverse(exp(hat(T))) * frame_T_global * (surfel_pos + t * surfel_normal))) - surfel_gradmag
-  
-  determine_descriptor_jacobians = True
-  if not determine_descriptor_jacobians:
-    print('Determining descriptor jacobians is deactivated')
-    print('')
-  if determine_descriptor_jacobians:
-    # Jacobian of descriptor residual wrt. global_T_frame changes (using delta: T):
-    print('### Jacobian of descriptor residual wrt. global_T_frame changes ###')
-    functions = [lambda descriptor : descriptor - surfel_gradmag,
-                 lambda point : InterpolateBilinear(point[0], point[1], top_left, top_right, bottom_left, bottom_right),
-                 lambda point : Project(point, fx, fy, cx, cy),
-                 lambda left : MatrixVectorMultiplyHomogeneous(left, local_surfel_pos),
-                 SE3Inverse,
-                 SE3exp]
-    parameters = Matrix(6, 1, lambda i,j:var('T_%d' % (i)))
-    parameter_values = zeros(6, 1)
-    ComputeJacobian(functions, parameters, parameter_values)
-    print('')
-    print('')
     
     
   
