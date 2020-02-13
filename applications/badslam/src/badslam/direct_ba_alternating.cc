@@ -174,6 +174,7 @@ repeat_pose_estimation:;
       for (int row = 0; row < 6; ++ row) {
         for (int col = row; col < 6; ++ col) {
           H(row, col) = H_temp[index];
+          H(col, row) = H_temp[index];
           ++ index;
         }
       }
@@ -204,7 +205,23 @@ repeat_pose_estimation:;
     // Solve for the update x
     // NOTE: Not sure if using double is helpful here
     Eigen::Matrix<float, 6, 1> x = H.cast<double>().selfadjointView<Eigen::Upper>().ldlt().solve(b.cast<double>()).cast<float>();
-    
+
+
+// Note: (pang) calculate linearized_jacobians and linearized_residuals from H and b
+    // const double eps = 1e-6;
+    // Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> saes2(H.cast<double>());
+    // Eigen::VectorXd S = Eigen::VectorXd((saes2.eigenvalues().array() > eps).select(saes2.eigenvalues().array(), 0));
+    // Eigen::VectorXd S_inv = Eigen::VectorXd((saes2.eigenvalues().array() > eps).select(saes2.eigenvalues().array().inverse(), 0));
+
+    // Eigen::VectorXd S_sqrt = S.cwiseSqrt();
+    // Eigen::VectorXd S_inv_sqrt = S_inv.cwiseSqrt();
+
+    // Eigen::VectorXd linearized_jacobians = S_sqrt.asDiagonal() * saes2.eigenvectors().transpose();
+    // Eigen::VectorXd linearized_residuals = S_inv_sqrt.asDiagonal() * saes2.eigenvectors().transpose() * b.cast<double>();
+
+    // std::cout << "linearized_jacobians: \n"  << linearized_jacobians << std::endl;
+    // std::cout << "linearized_residuals: \n"  << linearized_residuals << std::endl;
+
     if (kDebug) {
       LOG(INFO) << "Debug: x = " << std::endl << x;
     }
@@ -215,6 +232,7 @@ repeat_pose_estimation:;
     delta << x.tail<3>(), x.head<3>();
     frame_T_global_estimate =  SE3f::exp(-kDamping * delta) * frame_T_global_estimate;
     global_T_frame_estimate = frame_T_global_estimate.inverse();
+
     if (kDebug) {
       LOG(INFO) << "Debug: camera position: " << global_T_frame_estimate.translation().transpose();
       if (render_window_) {

@@ -1,9 +1,7 @@
 if (CMAKE_CUDA_COMPILER)
   # Dependencies
   find_package(SuiteSparse REQUIRED)
-  # find_package(DLib REQUIRED)
   find_package(Eigen3 REQUIRED)
-  # find_package(g2o REQUIRED)
   find_package(OpenGL REQUIRED)
   # Cross-platform threading. See:
   # https://cmake.org/cmake/help/latest/module/FindThreads.html
@@ -72,7 +70,6 @@ if (CMAKE_CUDA_COMPILER)
       third_party/g2o
       ${SuiteSparse_INCLUDE_DIRS}
       ${GLEW_INCLUDE_DIR}
-      # ${DLib_INCLUDE_DIRS}
     PUBLIC
       third_party
       ${OpenCV_INCLUDE_DIRS}
@@ -100,14 +97,8 @@ if (CMAKE_CUDA_COMPILER)
   target_link_libraries(badslam_baselib
     PRIVATE
       opengv
-      # g2o::core
-      # g2o::types_slam3d
-      # g2o::solver_csparse
-      # g2o::csparse_extension
       ${SuiteSparse_LIBRARIES}
-      # g2o::stuff
       ${OpenCV_LIBS}
-      # ${DLib_LIBS}
       DBoW2
       g2o
       ${realsense2_LIBRARY}
@@ -156,7 +147,6 @@ if (CMAKE_CUDA_COMPILER)
     src/badslam/test/test_intrinsics_optimization_geometric_residual.cc
     src/badslam/test/test_intrinsics_optimization_photometric_residual.cc
     src/badslam/test/test_pairwise_frame_tracking.cc
-    src/badslam/test/test_pose_graph_optimizer.cc
     src/badslam/test/test_pose_optimization_geometric_residual.cc
     src/badslam/test/test_pose_optimization_photometric_residual.cc
   )
