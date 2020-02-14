@@ -182,7 +182,8 @@ int LIBVIS_QT_MAIN(int argc, char** argv) {
   bad_slam_config.parallel_ba =
       !cmd_parser.Flag("--sequential_ba", "Performs bundle adjustment "
       "sequentially instead of in parallel to odometry.");
-  
+  bad_slam_config.parallel_ba = false;
+
   bad_slam_config.use_pcg =
       cmd_parser.Flag(
           "--use_pcg",
