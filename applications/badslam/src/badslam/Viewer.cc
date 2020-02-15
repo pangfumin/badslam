@@ -38,8 +38,8 @@
 namespace ORB_SLAM2
 {
 
-Viewer::Viewer(System* pSystem, FrameDrawer *pFrameDrawer, MapDrawer *pMapDrawer, Tracking *pTracking, const string &strSettingPath):
-    mpSystem(pSystem), mpFrameDrawer(pFrameDrawer),mpMapDrawer(pMapDrawer), mpTracker(pTracking)
+Viewer::Viewer(System* pSystem, FrameDrawer *pFrameDrawer,  Tracking *pTracking, const string &strSettingPath):
+    mpSystem(pSystem), mpFrameDrawer(pFrameDrawer), mpTracker(pTracking)
 {
     cv::FileStorage fSettings(strSettingPath, cv::FileStorage::READ);
 

@@ -31,7 +31,6 @@
 
 #include "Tracking.h"
 #include "FrameDrawer.h"
-#include "MapDrawer.h"
 #include "Map.h"
 #include "LocalMapping.h"
 #include "LoopClosing.h"
@@ -158,7 +157,6 @@ private:
     Viewer* mpViewer;
 
     FrameDrawer* mpFrameDrawer;
-    MapDrawer* mpMapDrawer;
 
     // System threads: Local Mapping, Loop Closing, Viewer.
     // The Tracking thread "lives" in the main execution thread that creates the System object.
