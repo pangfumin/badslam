@@ -64,8 +64,7 @@ Viewer::Viewer(System* pSystem, FrameDrawer *pFrameDrawer,  Tracking *pTracking,
 
 void Viewer::Run()
 {
-    std::cout << "viewer run ..."  << std::endl;
-
+    // std::cout << "viewer run ..."  << std::endl;
 
     // cudaEventRecord(update_visualization_pre_event_, stream_);
     
