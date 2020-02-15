@@ -46,15 +46,6 @@ public:
     // frame. Drawing is refreshed according to the camera fps. We use Pangolin.
     void Run();
 
-    void RequestFinish();
-
-    void RequestStop();
-
-    bool isFinished();
-
-    bool isStopped();
-
-    void Release();
 
 private:
 
@@ -71,15 +62,7 @@ private:
 
     float mViewpointX, mViewpointY, mViewpointZ, mViewpointF;
 
-    bool CheckFinish();
-    void SetFinish();
-    bool mbFinishRequested;
-    bool mbFinished;
-    std::mutex mMutexFinish;
 
-    bool mbStopped;
-    bool mbStopRequested;
-    std::mutex mMutexStop;
 
 };
 
