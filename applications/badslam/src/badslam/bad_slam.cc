@@ -237,7 +237,7 @@ void BadSlam::ProcessFrame(int frame_index, bool force_keyframe) {
   bool need_orb_keyframe =  orbslam_system_->IsKeyframeNeeded();
   cv::Mat Tcw = orbslam_system_->GetTracker()->mCurrentFrame.GetTcw();
 
-  orbslam_system_->GetViewer()->Run();
+  
   // direct_ba_->Lock();
   // SE3f new_global_T_frame = ORB_SLAM2::Converter::toSophusSE3(Tcw).inverse().cast<float>();
   // rgbd_video_->depth_frame_mutable(frame_index)->SetGlobalTFrame(new_global_T_frame);

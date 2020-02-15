@@ -66,6 +66,7 @@
 #include "badslam/render_window.h"
 #include "badslam/util.cuh"
 #include "badslam/util.h"
+#include "badslam/System.h"
 
 // This must be done outside of any namespace according to the Qt documentation.
 void InitQtResources() {
@@ -1807,8 +1808,7 @@ void MainWindow::WorkerThreadMain() {
       pre_load_thread.PreLoad(frame_index_ + 1);
     }
     
-    // Optionally, visualize the input images.
-    emit UpdateCurrentFrameImagesSignal(frame_index_, true);
+   
     
     // Let BAD SLAM process the current RGB-D frame. This function does the
     // actual work.
@@ -1823,9 +1823,15 @@ void MainWindow::WorkerThreadMain() {
       bad_slam_->ProcessFrame(frame_index_, create_kf_);
       create_kf_ = false;
     }
-    
-    // Update the 3D visualization.
+
+
+    // Optionally, visualize the input images.
+    emit UpdateCurrentFrameImagesSignal(frame_index_, true);
+   // Update the 3D visualization.
     //bad_slam_->UpdateOdometryVisualization(frame_index_, show_current_frame_);
+    bad_slam_->orbslam_system_->GetViewer()->Run();
+    
+ 
     
     // Measure the frame time, and optionally restrict the frames per second.
     if (!skip_frame_) {
@@ -2036,10 +2042,11 @@ void MainWindow::UpdateCurrentFrameImages(int frame_index, bool images_in_use_el
   current_frame_color_display->SetImage(*rgb_image);
   current_frame_depth_display->SetImage(*depth_image);
 
-  cv::Mat cv_image = const_cast<Image<Vec3u8>*>(rgb_image)->WrapInCVMat(CV_8UC3).clone();
+  // cv::Mat cv_image = const_cast<Image<Vec3u8>*>(rgb_image)->WrapInCVMat(CV_8UC3).clone();
   // cv::imwrite("/home/pang/badslam.png", cv_image);
+  
   Image<Vec3u8> rgb_image_from_cv;
-  rgb_image_from_cv.CopyFromCVMat(cv_image);
+  rgb_image_from_cv.CopyFromCVMat(bad_slam_->orbslam_system_->GetTracker()->feature_image_);
   current_frame_sparse_feature_display->SetImage(rgb_image_from_cv);
   
   Image<Vec3u8> combined_image(depth_image->size());

@@ -112,7 +112,7 @@ public:
     bool mbOnlyTracking;
 
     void Reset();
-
+    cv::Mat feature_image_;
 protected:
 
     // Main tracking function. It is independent of the input sensor.

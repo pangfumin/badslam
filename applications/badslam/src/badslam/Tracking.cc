@@ -359,8 +359,8 @@ void Tracking::Track(const bool& force_keyframe)
         // Note: (pang) UI may stock when --show_input_images not used when
         // show or frame.
         //
-        cv::Mat im = mpFrameDrawer->DrawFrame();
-        cv::imshow("ORB-SLAM2: Current Frame",im);
+        feature_image_ = mpFrameDrawer->DrawFrame();
+        //cv::imshow("ORB-SLAM2: Current Frame",im);
         // todo: (pang) visualize current camera image 
         // // cv::waitKey(mT);
 
