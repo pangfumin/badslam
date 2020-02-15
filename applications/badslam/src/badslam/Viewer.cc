@@ -95,7 +95,24 @@ void Viewer::Run()
 
     // render_window_->SetEstimatedTrajectoryNoLock(std::move(estimated_trajectory));
 
+    // todo(pang) render keyframe
+    const vector<KeyFrame*> vpKFs = mpSystem->GetMap()->GetAllKeyFrames();
+    vector<Eigen::Matrix4f> keyframe_poses;
+    vector<int> keyframe_ids;
     
+    keyframe_poses.reserve(vpKFs.size());
+    keyframe_ids.reserve(vpKFs.size());
+    
+    for (int i = 0; i < vpKFs.size(); ++ i) {
+        if (!vpKFs[i]) {
+        continue;
+        }
+        keyframe_poses.push_back(Converter::toSophusSE3(vpKFs[i]->GetPose()).inverse().cast<float>().matrix());
+        keyframe_ids.push_back(vpKFs[i]->mnFrameId);
+    }
+    
+    mpSystem->GetBadSlam()->render_window_->SetKeyframePosesNoLock(std::move(keyframe_poses), std::move(keyframe_ids));
+
     
     render_mutex_lock.unlock();
     

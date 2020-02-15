@@ -126,6 +126,7 @@ public:
     Tracking* GetTracker() const { return mpTracker; }
     Viewer* GetViewer() const { return mpViewer; }
     vis::BadSlam* GetBadSlam() const { return badslam_; }
+    Map* GetMap() const { return mpMap; }
 
 private:
 
