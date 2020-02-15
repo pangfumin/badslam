@@ -46,7 +46,9 @@ using namespace std;
 namespace ORB_SLAM2
 {
 
-Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer, MapDrawer *pMapDrawer, Map *pMap, KeyFrameDatabase* pKFDB, const string &strSettingPath, const int sensor):
+Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer, MapDrawer *pMapDrawer, 
+    Map *pMap, KeyFrameDatabase* pKFDB, const string &strSettingPath, const int sensor):
+    keyframe_needed_(false),
     mState(NO_IMAGES_YET), mSensor(sensor), mbOnlyTracking(false), mbVO(false), mpORBVocabulary(pVoc),
     mpKeyFrameDB(pKFDB), mpInitializer(static_cast<Initializer*>(NULL)), mpSystem(pSys),
     mpFrameDrawer(pFrameDrawer), mpMapDrawer(pMapDrawer), mpMap(pMap), mnLastRelocFrameId(0)
@@ -167,7 +169,7 @@ void Tracking::SetLoopClosing(LoopClosing *pLoopClosing)
 // }
 
 
-cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB,const cv::Mat &imD, const double &timestamp)
+cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB,const cv::Mat &imD, const double &timestamp, const bool& force_keyframe)
 {
     mImGray = imRGB;
     cv::Mat imDepth = imD;
@@ -192,14 +194,14 @@ cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB,const cv::Mat &imD, const d
 
     mCurrentFrame = Frame(mImGray,imDepth,timestamp,mpORBextractorLeft,mpORBVocabulary,mK,mDistCoef,mbf,mThDepth);
 
-    Track();
+    Track( force_keyframe);
 
     return mCurrentFrame.mTcw.clone();
 }
 
 
 
-void Tracking::Track()
+void Tracking::Track(const bool& force_keyframe)
 {
 
     if(mState==NO_IMAGES_YET)
@@ -401,8 +403,12 @@ void Tracking::Track()
             mlpTemporalPoints.clear();
 
             // Check if we need to insert a new keyframe
-            if(NeedNewKeyFrame())
-                CreateNewKeyFrame();
+            keyframe_needed_ = false;
+            if(force_keyframe || NeedNewKeyFrame()) {
+                 CreateNewKeyFrame(); 
+                 keyframe_needed_ = true;
+            }
+               
 
             // We allow points with high innovation (considererd outliers by the Huber Function)
             // pass to the new keyframe, so that bundle adjustment will finally decide

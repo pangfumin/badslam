@@ -213,13 +213,43 @@ void BadSlam::ProcessFrame(int frame_index, bool force_keyframe) {
     RunOdometry(frame_index);
     pose_estimated_ = true;
   }
-  
+
+
   // Use a very basic keyframe selection strategy: regularly select one
   // keyframe every keyframe_interval frames.
   bool create_keyframe =
       force_keyframe ||
       ((frame_index - config_.start_frame) % config_.keyframe_interval == 0);
+
+  /// orbslam <
+
+  // Pass the image to the SLAM system
+  cv::Mat imRGB = const_cast<Image<Vec3u8>*>(rgb_image)->WrapInCVMat(CV_8UC3).clone();
+  cv::cvtColor(imRGB, imRGB, CV_BGR2RGB);
+
+   const Image<u16>* local_depth_image =
+      rgbd_video_->depth_frame_mutable(frame_index)->GetImage().get();
+  cv::Mat imD = const_cast<Image<u16>*>(local_depth_image)->WrapInCVMat(CV_16UC1).clone();
+  // cv::imshow("image" , imD);
+  // cv::waitKey(2);
   
+  orbslam_system_->TrackRGBD(imRGB,imD,frame_index, create_keyframe);
+  bool need_orb_keyframe =  orbslam_system_->IsKeyframeNeeded();
+  cv::Mat Tcw = orbslam_system_->GetTracker()->mCurrentFrame.GetTcw();
+  direct_ba_->Lock();
+  SE3f new_global_T_frame = ORB_SLAM2::Converter::toSophusSE3(Tcw).inverse().cast<float>();
+  rgbd_video_->depth_frame_mutable(frame_index)->SetGlobalTFrame(new_global_T_frame);
+  rgbd_video_->color_frame_mutable(frame_index)->SetGlobalTFrame(new_global_T_frame);
+  direct_ba_->Unlock();
+
+  ///  orbslam >
+
+  
+  // if (create_keyframe) {
+  //   std::cout << "[BAD]: need_keyframe: " << create_keyframe << std::endl;
+  // }
+    
+
   if (create_keyframe) {
     CreateKeyframe(frame_index,
                    rgb_image,
@@ -294,24 +324,14 @@ void BadSlam::ProcessFrame(int frame_index, bool force_keyframe) {
         } else {
           num_planned_ba_iterations_ = std::max<int>(0, num_planned_ba_iterations_ - iterations_done);
         }
+
+
       }
     }
   }
 
 
-  // orbslam
-
-  // Pass the image to the SLAM system
-  cv::Mat imRGB = const_cast<Image<Vec3u8>*>(rgb_image)->WrapInCVMat(CV_8UC3).clone();
-  cv::cvtColor(imRGB, imRGB, CV_BGR2RGB);
-
-   const Image<u16>* local_depth_image =
-      rgbd_video_->depth_frame_mutable(frame_index)->GetImage().get();
-  cv::Mat imD = const_cast<Image<u16>*>(local_depth_image)->WrapInCVMat(CV_16UC1).clone();
-  // cv::imshow("image" , imD);
-  // cv::waitKey(2);
   
-  orbslam_system_->TrackRGBD(imRGB,imD,0);
 
 }
 

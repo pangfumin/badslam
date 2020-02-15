@@ -61,7 +61,35 @@ void LocalMapping::Run()
         // Check if there are keyframes in the queue
         if(CheckNewKeyFrames())
         {
-            // BoW conversion and insertion in Map
+            RunOneStep();
+        }
+        else if(Stop())
+        {
+            // Safe area to stop
+            while(isStopped() && !CheckFinish())
+            {
+                usleep(3000);
+            }
+            if(CheckFinish())
+                break;
+        }
+
+        ResetIfRequested();
+
+        // Tracking will see that Local Mapping is busy
+        SetAcceptKeyFrames(true);
+
+        if(CheckFinish())
+            break;
+
+        usleep(3000);
+    }
+
+    SetFinish();
+}
+
+void LocalMapping::RunOneStep() {
+    // BoW conversion and insertion in Map
             ProcessNewKeyFrame();
 
             // Check recent MapPoints
@@ -89,32 +117,7 @@ void LocalMapping::Run()
             }
 
             mpLoopCloser->InsertKeyFrame(mpCurrentKeyFrame);
-        }
-        else if(Stop())
-        {
-            // Safe area to stop
-            while(isStopped() && !CheckFinish())
-            {
-                usleep(3000);
-            }
-            if(CheckFinish())
-                break;
-        }
-
-        ResetIfRequested();
-
-        // Tracking will see that Local Mapping is busy
-        SetAcceptKeyFrames(true);
-
-        if(CheckFinish())
-            break;
-
-        usleep(3000);
-    }
-
-    SetFinish();
 }
-
 void LocalMapping::InsertKeyFrame(KeyFrame *pKF)
 {
     unique_lock<mutex> lock(mMutexNewKFs);

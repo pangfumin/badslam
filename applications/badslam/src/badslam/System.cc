@@ -114,7 +114,7 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
 }
 
 
-cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const double &timestamp)
+cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const double &timestamp, const bool& force_keyframe)
 {
     if(mSensor!=RGBD)
     {
@@ -156,7 +156,7 @@ cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const doub
     }
     }
 
-    cv::Mat Tcw = mpTracker->GrabImageRGBD(im,depthmap,timestamp);
+    cv::Mat Tcw = mpTracker->GrabImageRGBD(im,depthmap,timestamp, force_keyframe);
 
     unique_lock<mutex> lock2(mMutexState);
     mTrackingState = mpTracker->mState;
@@ -165,6 +165,9 @@ cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const doub
     return Tcw;
 }
 
+bool System::IsKeyframeNeeded() {
+    return mpTracker->keyframe_needed_;
+}
 
 void System::ActivateLocalizationMode()
 {
