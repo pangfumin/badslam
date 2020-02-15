@@ -31,6 +31,8 @@
 #include "bad_slam.h"
 #include "direct_ba.h"
 #include "Converter.h"
+#include "libvis/point_cloud.h"
+#include "libvis/any_image.h"
 // #include 
 
 namespace ORB_SLAM2
@@ -86,8 +88,7 @@ void Viewer::Run()
     // }
 
 
-    // Note:(pang) set current pose from orbslam, other elements still need change
-    // render_window_->SetCurrentFramePoseNoLock(rgbd_video_->depth_frame(frame_index)->global_T_frame().matrix());
+    // 1. set current pose 
     cv::Mat Tcw = mpTracker->mCurrentFrame.GetTcw();
     Sophus::SE3f pose = ORB_SLAM2::Converter::toSophusSE3(Tcw).cast<float>().inverse();  // show Twc
     mpSystem->GetBadSlam()->render_window_->SetCurrentFramePoseNoLock(pose.matrix());
@@ -95,7 +96,7 @@ void Viewer::Run()
 
     // render_window_->SetEstimatedTrajectoryNoLock(std::move(estimated_trajectory));
 
-    // todo(pang) render keyframe
+    //  2. render keyframe
     const vector<KeyFrame*> vpKFs = mpSystem->GetMap()->GetAllKeyFrames();
     vector<Eigen::Matrix4f> keyframe_poses;
     vector<int> keyframe_ids;
@@ -113,10 +114,37 @@ void Viewer::Run()
     
     mpSystem->GetBadSlam()->render_window_->SetKeyframePosesNoLock(std::move(keyframe_poses), std::move(keyframe_ids));
 
-    
+
     render_mutex_lock.unlock();
     
     mpSystem->GetBadSlam()->render_window_->RenderFrame();
+
+      // 3. visualize mappoint
+    const vector<MapPoint*> &vpMPs = mpSystem->GetMap()->GetAllMapPoints();
+    if(vpMPs.empty())
+        return;
+
+    std::cout << "GetAllMapPoints: " << vpMPs.size() << std::endl;
+    std::shared_ptr<vis::Point3fC3u8Cloud> current_frame_cloud(new vis::Point3fC3u8Cloud(vpMPs.size()));
+    int point_index = 0;
+    for(size_t i=0, iend=vpMPs.size(); i<iend;i++)
+    {
+        if(vpMPs[i]->isBad() )
+            continue;
+        cv::Mat pos = vpMPs[i]->GetWorldPos();
+        vis::Point3fC3u8& point = current_frame_cloud->at(point_index);
+        point.position() = Converter::toVector3d(pos).cast<float>();
+        point.color() =  vis::Vec3u8(80, 80, 255);
+        ++ point_index;
+    }
+
+
+    
+    mpSystem->GetBadSlam()->render_window_->SetFramePointCloud(
+        current_frame_cloud,
+        Sophus::SE3f());
+    mpSystem->GetBadSlam()->render_window_->RenderFrame();
+
 
 
 
