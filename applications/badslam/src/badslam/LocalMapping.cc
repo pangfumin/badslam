@@ -28,12 +28,22 @@
 
 #include<mutex>
 
+#include "libvis/camera.h"
+#include "direct_ba.h"
+#include "Converter.h"
+#include "libvis/point_cloud.h"
+#include "libvis/any_image.h"
+#include "libvis/image.h"
+
+
+
 namespace ORB_SLAM2
 {
 
-LocalMapping::LocalMapping(Map *pMap, const float bMonocular):
+LocalMapping::LocalMapping(vis::BadSlam* badslam, Map *pMap, const float bMonocular):
     mbMonocular(bMonocular), mbResetRequested(false), mbFinishRequested(false), mbFinished(true), mpMap(pMap),
-    mbAbortBA(false), mbStopped(false), mbStopRequested(false), mbNotStop(false), mbAcceptKeyFrames(true)
+    mbAbortBA(false), mbStopped(false), mbStopRequested(false), mbNotStop(false), mbAcceptKeyFrames(true),
+    bad_slam_(badslam)
 {
 }
 
@@ -61,6 +71,7 @@ void LocalMapping::Run()
         // Check if there are keyframes in the queue
         if(CheckNewKeyFrames())
         {
+            
             RunOneStep();
         }
         else if(Stop())
@@ -90,33 +101,45 @@ void LocalMapping::Run()
 
 void LocalMapping::RunOneStep() {
     // BoW conversion and insertion in Map
-            ProcessNewKeyFrame();
+    ProcessNewKeyFrame();
+    // bad_slam_->
 
-            // Check recent MapPoints
-            MapPointCulling();
+    const vis::Image<vis::Vec3u8>* rgb_image =
+      bad_slam_->rgbd_video_->color_frame_mutable(mpCurrentKeyFrame->mnFrameId)->GetImage().get();
+    cv::Mat imRGB = const_cast<vis::Image<vis::Vec3u8>*>(rgb_image)->WrapInCVMat(CV_8UC3).clone();
+    cv::cvtColor(imRGB, imRGB, CV_BGR2RGB);
 
-            // Triangulate new MapPoints
-            CreateNewMapPoints();
+    const vis::Image<vis::u16>* depth_image =
+      bad_slam_->rgbd_video_->depth_frame_mutable(mpCurrentKeyFrame->mnFrameId)->GetImage().get();
+    cv::Mat imD = const_cast<vis::Image<vis::u16>*>(depth_image)->WrapInCVMat(CV_16UC1).clone();
+    
+    
 
-            if(!CheckNewKeyFrames())
-            {
-                // Find more matches in neighbor keyframes and fuse point duplications
-                SearchInNeighbors();
-            }
+    // Check recent MapPoints
+    MapPointCulling();
 
-            mbAbortBA = false;
+    // Triangulate new MapPoints
+    CreateNewMapPoints();
 
-            if(!CheckNewKeyFrames() && !stopRequested())
-            {
-                // Local BA
-                if(mpMap->KeyFramesInMap()>2)
-                    Optimizer::LocalBundleAdjustment(mpCurrentKeyFrame,&mbAbortBA, mpMap);
+    if(!CheckNewKeyFrames())
+    {
+        // Find more matches in neighbor keyframes and fuse point duplications
+        SearchInNeighbors();
+    }
 
-                // Check redundant local Keyframes
-                KeyFrameCulling();
-            }
+    mbAbortBA = false;
 
-            mpLoopCloser->InsertKeyFrame(mpCurrentKeyFrame);
+    if(!CheckNewKeyFrames() && !stopRequested())
+    {
+        // Local BA
+        if(mpMap->KeyFramesInMap()>2)
+            Optimizer::LocalBundleAdjustment(mpCurrentKeyFrame,&mbAbortBA, mpMap);
+
+        // Check redundant local Keyframes
+        KeyFrameCulling();
+    }
+
+    mpLoopCloser->InsertKeyFrame(mpCurrentKeyFrame);
 }
 void LocalMapping::InsertKeyFrame(KeyFrame *pKF)
 {
@@ -140,6 +163,7 @@ void LocalMapping::ProcessNewKeyFrame()
         mlNewKeyFrames.pop_front();
     }
 
+    // std::cout << "mpCurrentKeyFrame: " << mpCurrentKeyFrame->mnFrameId << std::endl;
     // Compute Bags of Words structures
     mpCurrentKeyFrame->ComputeBoW();
 

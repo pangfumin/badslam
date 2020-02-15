@@ -43,7 +43,7 @@ class KeyFrameDatabase;
 class KeyFrame
 {
 public:
-    KeyFrame(Frame &F, Map* pMap, KeyFrameDatabase* pKFDB);
+    KeyFrame(Frame &F, Map* pMap, KeyFrameDatabase* pKFDB, const bool& need_dense_keyframe = false);
 
     // Pose functions
     void SetPose(const cv::Mat &Tcw);
@@ -189,6 +189,8 @@ public:
     const cv::Mat mK;
 
 
+    // badslam
+    bool dense_keyframe_;
     // The following variables need to be accessed trough a mutex to be thread safe.
 protected:
 
@@ -231,6 +233,9 @@ protected:
     std::mutex mMutexPose;
     std::mutex mMutexConnections;
     std::mutex mMutexFeatures;
+
+
+   
 };
 
 } //namespace ORB_SLAM

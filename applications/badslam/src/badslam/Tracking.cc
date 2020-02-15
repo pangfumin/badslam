@@ -404,7 +404,7 @@ void Tracking::Track(const bool& force_keyframe)
             // Check if we need to insert a new keyframe
             keyframe_needed_ = false;
             if(force_keyframe || NeedNewKeyFrame()) {
-                 CreateNewKeyFrame(); 
+                 CreateNewKeyFrame(force_keyframe); 
                  keyframe_needed_ = true;
             }
                
@@ -837,12 +837,12 @@ bool Tracking::NeedNewKeyFrame()
         return false;
 }
 
-void Tracking::CreateNewKeyFrame()
+void Tracking::CreateNewKeyFrame(const bool& need_dense_keyframe)
 {
     if(!mpLocalMapper->SetNotStop(true))
         return;
 
-    KeyFrame* pKF = new KeyFrame(mCurrentFrame,mpMap,mpKeyFrameDB);
+    KeyFrame* pKF = new KeyFrame(mCurrentFrame,mpMap,mpKeyFrameDB, need_dense_keyframe);
 
     mpReferenceKF = pKF;
     mCurrentFrame.mpReferenceKF = pKF;

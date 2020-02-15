@@ -221,6 +221,10 @@ void BadSlam::ProcessFrame(int frame_index, bool force_keyframe) {
       force_keyframe ||
       ((frame_index - config_.start_frame) % config_.keyframe_interval == 0);
 
+  // if(create_keyframe) {
+  //   std::cout << "request create_keyframe: " << frame_index << std::endl;
+  // }
+
   /// orbslam <
 
   // Pass the image to the SLAM system
