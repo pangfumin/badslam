@@ -1825,7 +1825,7 @@ void MainWindow::WorkerThreadMain() {
     }
     
     // Update the 3D visualization.
-    bad_slam_->UpdateOdometryVisualization(frame_index_, show_current_frame_);
+    //bad_slam_->UpdateOdometryVisualization(frame_index_, show_current_frame_);
     
     // Measure the frame time, and optionally restrict the frames per second.
     if (!skip_frame_) {

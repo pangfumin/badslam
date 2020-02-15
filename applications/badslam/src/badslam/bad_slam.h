@@ -45,6 +45,7 @@
 
 namespace ORB_SLAM2{
   class System;
+  class LoopClosing;
 }
 
 namespace vis {
@@ -222,7 +223,7 @@ class BadSlam {
       const vector<cv::Mat_<u8>>& queued_keyframe_gray_images,
       const vector<shared_ptr<Image<u16>>>& queued_keyframe_depth_images);
   
- private:
+//  private:
   // Appends the queued keyframes to the poses and ptr vectors for
   // visualization, converting their relative poses to absolute ones using the
   // current keyframe pose estimates.

@@ -37,7 +37,11 @@
 #include "LoopClosing.h"
 #include "KeyFrameDatabase.h"
 #include "ORBVocabulary.h"
-// #include "Viewer.h"
+#include "Viewer.h"
+
+namespace vis {
+    class BadSlam;
+}
 
 namespace ORB_SLAM2
 {
@@ -62,7 +66,9 @@ public:
 public:
 
     // Initialize the SLAM system. It launches the Local Mapping, Loop Closing and Viewer threads.
-    System(const string &strVocFile, const string &strSettingsFile, const eSensor sensor, const bool bUseViewer = true);
+    System(const string &strVocFile, const string &strSettingsFile, const eSensor sensor, 
+            vis::BadSlam* badslam_ptr,
+            const bool bUseViewer = true);
 
 
     // Process the given rgbd frame. Depthmap must be registered to the RGB frame.
@@ -118,6 +124,8 @@ public:
     std::vector<cv::KeyPoint> GetTrackedKeyPointsUn();
 
     Tracking* GetTracker() const { return mpTracker; }
+    Viewer* GetViewer() const { return mpViewer; }
+    vis::BadSlam* GetBadSlam() const { return badslam_; }
 
 private:
 
@@ -146,7 +154,7 @@ private:
     LoopClosing* mpLoopCloser;
 
     // The viewer draws the map and the current camera pose. It uses Pangolin.
-    // Viewer* mpViewer;
+    Viewer* mpViewer;
 
     FrameDrawer* mpFrameDrawer;
     MapDrawer* mpMapDrawer;
@@ -171,6 +179,10 @@ private:
     std::vector<MapPoint*> mTrackedMapPoints;
     std::vector<cv::KeyPoint> mTrackedKeyPointsUn;
     std::mutex mMutexState;
+
+    // badslam
+
+    vis::BadSlam* badslam_;
 };
 
 }// namespace ORB_SLAM

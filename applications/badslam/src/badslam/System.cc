@@ -23,15 +23,18 @@
 #include "System.h"
 #include "Converter.h"
 
+
 #include <thread>
 #include <iomanip>
+#include "bad_slam.h"
 
 namespace ORB_SLAM2
 {
 
 System::System(const string &strVocFile, const string &strSettingsFile, const eSensor sensor,
+    vis::BadSlam* badslam_ptr,
                const bool bUseViewer):mSensor(sensor),  mbReset(false),mbActivateLocalizationMode(false),
-        mbDeactivateLocalizationMode(false)
+        mbDeactivateLocalizationMode(false), badslam_(badslam_ptr)
 {
     // Output welcome message
     cout << endl <<
@@ -101,6 +104,8 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
     //     mptViewer = new thread(&Viewer::Run, mpViewer);
     //     mpTracker->SetViewer(mpViewer);
     // }
+
+    mpViewer = new Viewer(this, mpFrameDrawer,mpMapDrawer,mpTracker,strSettingsFile);
 
     //Set pointers between threads
     mpTracker->SetLocalMapper(mpLocalMapper);
