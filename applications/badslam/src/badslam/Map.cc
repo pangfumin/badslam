@@ -22,7 +22,7 @@
 
 #include<mutex>
 
-namespace ORB_SLAM2
+namespace vis
 {
 
 Map::Map():mnMaxKFid(0),mnBigChangeIdx(0)

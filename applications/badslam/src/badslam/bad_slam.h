@@ -43,7 +43,7 @@
 #include "badslam/pairwise_frame_tracking.h"
 
 
-namespace ORB_SLAM2{
+namespace vis{
   class System;
   class LoopClosing;
 }
@@ -369,7 +369,7 @@ class BadSlam {
 
 
   // orbslam
-  std::shared_ptr<ORB_SLAM2::System> orbslam_system_;
+  std::shared_ptr<vis::System> orbslam_system_;
 };
 
 }

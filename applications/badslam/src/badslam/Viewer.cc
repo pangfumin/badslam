@@ -35,7 +35,7 @@
 #include "libvis/any_image.h"
 // #include 
 
-namespace ORB_SLAM2
+namespace vis
 {
 
 Viewer::Viewer(System* pSystem, FrameDrawer *pFrameDrawer,  Tracking *pTracking, const string &strSettingPath):
@@ -85,7 +85,7 @@ void Viewer::Run()
 
     // 1. set current pose 
     cv::Mat Tcw = mpTracker->mCurrentFrame.GetTcw();
-    Sophus::SE3f pose = ORB_SLAM2::Converter::toSophusSE3(Tcw).cast<float>().inverse();  // show Twc
+    Sophus::SE3f pose = vis::Converter::toSophusSE3(Tcw).cast<float>().inverse();  // show Twc
     mpSystem->GetBadSlam()->render_window_->SetCurrentFramePoseNoLock(pose.matrix());
 
 

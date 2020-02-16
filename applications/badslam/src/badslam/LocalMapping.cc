@@ -37,7 +37,7 @@
 
 
 
-namespace ORB_SLAM2
+namespace vis
 {
 
 LocalMapping::LocalMapping(vis::BadSlam* badslam, Map *pMap, const float bMonocular):

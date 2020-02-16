@@ -42,7 +42,7 @@ namespace vis {
     class BadSlam;
 }
 
-namespace ORB_SLAM2
+namespace vis
 {
 
 class Viewer;

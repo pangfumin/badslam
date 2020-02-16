@@ -27,7 +27,7 @@
 
 using namespace std;
 
-namespace ORB_SLAM2
+namespace vis
 {
 
 KeyFrameDatabase::KeyFrameDatabase (const ORBVocabulary &voc):

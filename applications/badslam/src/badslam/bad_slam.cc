@@ -75,8 +75,8 @@ BadSlam::BadSlam(
 
     const string strVocFile = "/home/pang/disk/software/ORB_SLAM2/Vocabulary/ORBvoc.txt";
     const string strSettingsFile = "/home/pang/disk/software/ORB_SLAM2/Examples/RGB-D/TUM1.yaml";
-    orbslam_system_ = std::make_shared<ORB_SLAM2::System>(strVocFile, strSettingsFile, 
-                  ORB_SLAM2::System::eSensor::RGBD, this,false);
+    orbslam_system_ = std::make_shared<vis::System>(strVocFile, strSettingsFile, 
+                  vis::System::eSensor::RGBD, this,false);
 
 
   valid_ = true;
@@ -243,7 +243,7 @@ void BadSlam::ProcessFrame(int frame_index, bool force_keyframe) {
 
   
   // direct_ba_->Lock();
-  // SE3f new_global_T_frame = ORB_SLAM2::Converter::toSophusSE3(Tcw).inverse().cast<float>();
+  // SE3f new_global_T_frame = vis::Converter::toSophusSE3(Tcw).inverse().cast<float>();
   // rgbd_video_->depth_frame_mutable(frame_index)->SetGlobalTFrame(new_global_T_frame);
   // rgbd_video_->color_frame_mutable(frame_index)->SetGlobalTFrame(new_global_T_frame);
   // direct_ba_->Unlock();
@@ -413,7 +413,7 @@ void BadSlam::UpdateOdometryVisualization(
   // Note:(pang) set current pose from orbslam, other elements still need change
   // render_window_->SetCurrentFramePoseNoLock(rgbd_video_->depth_frame(frame_index)->global_T_frame().matrix());
   cv::Mat Tcw = orbslam_system_->GetTracker()->mCurrentFrame.GetTcw();
-  Sophus::SE3f pose = ORB_SLAM2::Converter::toSophusSE3(Tcw).cast<float>().inverse();  // show Twc
+  Sophus::SE3f pose = vis::Converter::toSophusSE3(Tcw).cast<float>().inverse();  // show Twc
   render_window_->SetCurrentFramePoseNoLock(pose.matrix());
 
 

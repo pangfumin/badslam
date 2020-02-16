@@ -30,7 +30,7 @@
 #include <mutex>
 #include "bad_slam.h"
 
-namespace ORB_SLAM2
+namespace vis
 {
 
 class Tracking;

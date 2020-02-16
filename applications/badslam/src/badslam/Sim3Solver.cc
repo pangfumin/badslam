@@ -30,7 +30,7 @@
 
 #include "DUtils/Random.h"
 
-namespace ORB_SLAM2
+namespace vis
 {
 
 

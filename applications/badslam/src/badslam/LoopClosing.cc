@@ -35,7 +35,7 @@
 #include<thread>
 
 
-namespace ORB_SLAM2
+namespace vis
 {
 
 LoopClosing::LoopClosing(Map *pMap, KeyFrameDatabase *pDB, ORBVocabulary *pVoc, const bool bFixScale):

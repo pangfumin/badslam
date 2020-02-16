@@ -23,7 +23,7 @@
 #include "ORBmatcher.h"
 #include<mutex>
 
-namespace ORB_SLAM2
+namespace vis
 {
 
 long unsigned int KeyFrame::nNextId=0;
