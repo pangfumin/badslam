@@ -1576,9 +1576,10 @@ void MainWindow::WorkerThreadMain() {
         config_.k4a_exposure);
     live_input = 2;
   } else {
+      std::string trajectory_path = "groundtruth.txt";
     if (!ReadTUMRGBDDatasetAssociatedAndCalibrated(
             dataset_folder_path_.c_str(),
-            nullptr,  // TODO:  trajectory_path.empty() ? nullptr : trajectory_path.c_str(),
+            trajectory_path.empty() ? nullptr : trajectory_path.c_str(),
             &rgbd_video_)) {
       LOG(ERROR) << "Could not read dataset at: " << dataset_folder_path_.c_str();
       

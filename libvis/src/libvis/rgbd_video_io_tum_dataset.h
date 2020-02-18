@@ -203,6 +203,7 @@ bool ReadTUMRGBDDatasetAssociatedAndCalibrated(
       return false;
     }
   }
+  std::cout << "load gt: " << pose_timestamps.size() << " " << poses_global_T_frame.size() << std::endl;
   
   u32 width = 0;
   u32 height = 0;
@@ -233,19 +234,21 @@ bool ReadTUMRGBDDatasetAssociatedAndCalibrated(
     
     SE3f rgb_global_T_frame;
     double rgb_timestamp = atof(rgb_time_string);
-    if (!poses_global_T_frame.empty()) {
-      if (!InterpolatePose(rgb_timestamp, pose_timestamps, poses_global_T_frame, &rgb_global_T_frame)) {
-        continue;
-      }
-    }
-    
+//    if (!poses_global_T_frame.empty()) {
+//      if (!InterpolatePose(rgb_timestamp, pose_timestamps, poses_global_T_frame, &rgb_global_T_frame)) {
+//        continue;
+//      }
+//    }
+//
     SE3f depth_global_T_frame;
+    SE3f gt_global_T_frame;
     double depth_timestamp = atof(depth_time_string);
     if (!poses_global_T_frame.empty()) {
-      if (!InterpolatePose(depth_timestamp, pose_timestamps, poses_global_T_frame, &depth_global_T_frame)) {
+      if (!InterpolatePose(depth_timestamp, pose_timestamps, poses_global_T_frame, &gt_global_T_frame)) {
         continue;
       }
     }
+
     
     string color_filepath =
         string(dataset_folder_path) + "/" + rgb_filename;
@@ -260,6 +263,8 @@ bool ReadTUMRGBDDatasetAssociatedAndCalibrated(
     depth_frame->SetGlobalTFrame(depth_global_T_frame);
     rgbd_video->depth_frames_mutable()->push_back(depth_frame);
     rgbd_video->depth_timestamps_mutable()->push_back(vis::Time(depth_timestamp));
+
+      rgbd_video->groundtruth_pose_frames_mutable()->push_back(gt_global_T_frame);
     
     if (width == 0) {
       // Get width and height by loading one image file.
@@ -301,7 +306,8 @@ bool ReadTUMRGBDDatasetAssociatedAndCalibrated(
   std::cout << "depth ts   : " << rgbd_video->depth_timestamps_mutable()->size() << std::endl;
   std::cout << "imu   image: " << rgbd_video->imu_frames_mutable()->size() << std::endl;
   std::cout << "imu   ts   : " << rgbd_video->imu_timestamps_mutable()->size() << std::endl;
-  
+  std::cout << "gt    frame: " << rgbd_video->groundtruth_pose_frames_mutable()->size() << std::endl;
+
   return true;
 }
 

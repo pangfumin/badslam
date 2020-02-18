@@ -48,6 +48,8 @@ class RGBDVideo {
   typedef ImageFrameConstPtr<DepthT, SE3f> ConstDepthFrame;
   typedef ImageFramePtr<DepthT, SE3f> DepthFrame;
   typedef vector<DepthFrame> DepthFramesVector;
+
+
   
   inline const shared_ptr<Camera>& color_camera() const { return color_camera_; }
   inline shared_ptr<Camera>* color_camera_mutable() { return &color_camera_; }
@@ -70,10 +72,16 @@ class RGBDVideo {
   inline Time& depth_ts_mutable(int i) { return depth_timestamps_.at(i); }
 
 
+    inline std::vector<SE3f>* groundtruth_pose_frames_mutable() { return &groundtruth_pose_frames_; }
+    inline const SE3f  groundtruth_pose_frame(int i) const { return groundtruth_pose_frames_.at(i); }
+
   inline std::vector<Imu>* imu_frames_mutable() { return &imu_frames_; }
   inline std::vector<Time>* imu_timestamps_mutable() { return &imu_timestamps_; }
   inline const Imu  imu_frame(int i) const { return imu_frames_.at(i); }
   inline Imu& imu_frame_mutable(int i) { return imu_frames_.at(i); }
+
+
+
   
  private:
   shared_ptr<Camera> color_camera_;
@@ -82,7 +90,9 @@ class RGBDVideo {
   shared_ptr<Camera> depth_camera_;
   DepthFramesVector depth_frames_;
   std::vector<Time> depth_timestamps_;
-  std::vector<Imu> imu_frames_;
+    std::vector<SE3f> groundtruth_pose_frames_;
+
+    std::vector<Imu> imu_frames_;
   std::vector<Time> imu_timestamps_;
 };
 
