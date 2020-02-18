@@ -1718,9 +1718,7 @@ void MainWindow::WorkerThreadMain() {
                               strVocFile, strSettingsFile,
                                                     vis::System::eSensor::RGBD, false);
 
-//   bad_slam_ = orbslam_system_->GetBadSlam();
-//  (orbslam_system_->GetBadSlam()).reset(new BadSlam(config_, &rgbd_video_,
-//                              render_window_, &opengl_context_2));
+
   bad_slam_set_ = true;
   
   if (!import_calibration_path_.empty()) {
@@ -1865,7 +1863,7 @@ void MainWindow::WorkerThreadMain() {
     emit UpdateCurrentFrameImagesSignal(frame_index_, true);
    // Update the 3D visualization.
     (orbslam_system_)->UpdateOdometryVisualization(frame_index_, show_current_frame_);
-//    (orbslam_system_)->orbslam_system_->GetViewer()->Run();
+//    (orbslam_system_)->GetViewer()->Run();
     
  
     
