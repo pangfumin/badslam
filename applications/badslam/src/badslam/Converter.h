@@ -25,8 +25,8 @@
 #include <sophus/se3.hpp>
 
 #include<Eigen/Dense>
-#include"g2o/types/types_six_dof_expmap.h"
-#include"g2o/types/types_seven_dof_expmap.h"
+#include "g2o/types/types_six_dof_expmap.h"
+#include "g2o/types/types_seven_dof_expmap.h"
 
 namespace vis
 {

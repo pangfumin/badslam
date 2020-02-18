@@ -467,6 +467,11 @@ MainWindow::~MainWindow() {
     opengl_context.Deinitialize();
     opengl_context_2.Deinitialize();
   }
+
+
+    //orbslam
+    orbslam_system_->Shutdown();
+    orbslam_system_->SaveTrajectoryTUM("/home/pang/CameraTrajectory.txt");
 }
 
 void MainWindow::SaveState() {
@@ -1706,9 +1711,17 @@ void MainWindow::WorkerThreadMain() {
     config_.loop_detection_images_width = rgbd_video_.color_camera()->width();
     config_.loop_detection_images_height = rgbd_video_.color_camera()->height();
   }
-  
-  bad_slam_.reset(new BadSlam(config_, &rgbd_video_,
-                              render_window_, &opengl_context_2));
+
+    const string strVocFile = "/home/pang/disk/software/ORB_SLAM2/Vocabulary/ORBvoc.bin";
+    const string strSettingsFile = "/home/pang/disk/software/ORB_SLAM2/Examples/RGB-D/TUM1.yaml";
+    orbslam_system_ = std::make_shared<vis::System>(config_, &rgbd_video_,
+                              render_window_, &opengl_context_2,
+                              strVocFile, strSettingsFile,
+                                                    vis::System::eSensor::RGBD, false);
+
+   bad_slam_ = orbslam_system_->GetBadSlam();
+//  bad_slam_.reset(new BadSlam(config_, &rgbd_video_,
+//                              render_window_, &opengl_context_2));
   bad_slam_set_ = true;
   
   if (!import_calibration_path_.empty()) {
@@ -1821,6 +1834,30 @@ void MainWindow::WorkerThreadMain() {
       bad_slam_->PreprocessFrame(frame_index_, &bad_slam_->final_depth_buffer(), nullptr);
     } else {
       bad_slam_->ProcessFrame(frame_index_, create_kf_);
+
+        /// orbslam <
+
+
+        // Pass the image to the SLAM system
+        const Image<Vec3u8>* rgb_image =
+                rgbd_video_.color_frame_mutable(frame_index_)->GetImage().get();
+        cv::Mat imRGB = const_cast<Image<Vec3u8>*>(rgb_image)->WrapInCVMat(CV_8UC3).clone();
+        cv::cvtColor(imRGB, imRGB, CV_BGR2RGB);
+
+        const Image<u16>* local_depth_image =
+                rgbd_video_.depth_frame_mutable(frame_index_)->GetImage().get();
+        cv::Mat imD = const_cast<Image<u16>*>(local_depth_image)->WrapInCVMat(CV_16UC1).clone();
+        // cv::imshow("image" , imD);
+        // cv::waitKey(2);
+
+        orbslam_system_->TrackRGBD(imRGB,imD,frame_index_, false);
+        bool need_orb_keyframe =  orbslam_system_->IsKeyframeNeeded();
+        cv::Mat Tcw = orbslam_system_->GetTracker()->mCurrentFrame.GetTcw();
+
+
+
+        ///  orbslam >
+
       create_kf_ = false;
     }
 
@@ -1828,8 +1865,8 @@ void MainWindow::WorkerThreadMain() {
     // Optionally, visualize the input images.
     emit UpdateCurrentFrameImagesSignal(frame_index_, true);
    // Update the 3D visualization.
-    //bad_slam_->UpdateOdometryVisualization(frame_index_, show_current_frame_);
-    bad_slam_->orbslam_system_->GetViewer()->Run();
+    bad_slam_->UpdateOdometryVisualization(frame_index_, show_current_frame_);
+//    bad_slam_->orbslam_system_->GetViewer()->Run();
     
  
     
@@ -2046,7 +2083,7 @@ void MainWindow::UpdateCurrentFrameImages(int frame_index, bool images_in_use_el
   // cv::imwrite("/home/pang/badslam.png", cv_image);
   
   Image<Vec3u8> rgb_image_from_cv;
-  rgb_image_from_cv.CopyFromCVMat(bad_slam_->orbslam_system_->GetTracker()->feature_image_);
+  rgb_image_from_cv.CopyFromCVMat(orbslam_system_->GetTracker()->feature_image_);
   current_frame_sparse_feature_display->SetImage(rgb_image_from_cv);
   
   Image<Vec3u8> combined_image(depth_image->size());

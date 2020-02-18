@@ -73,10 +73,7 @@ BadSlam::BadSlam(
 
 
 
-    const string strVocFile = "/home/pang/disk/software/ORB_SLAM2/Vocabulary/ORBvoc.bin";
-    const string strSettingsFile = "/home/pang/disk/software/ORB_SLAM2/Examples/RGB-D/TUM1.yaml";
-    orbslam_system_ = std::make_shared<vis::System>(strVocFile, strSettingsFile, 
-                  vis::System::eSensor::RGBD, this,false);
+
 
 
   valid_ = true;
@@ -200,19 +197,19 @@ void BadSlam::ProcessFrame(int frame_index, bool force_keyframe) {
   // // After I/O is done, start the "no I/O" frame timer.
   frame_timer_.Start();
   
-  // // Update target frame end time for real-time simulation.
-  // target_frame_end_time_ += 1. / config_.target_frame_rate;
+   // Update target frame end time for real-time simulation.
+   target_frame_end_time_ += 1. / config_.target_frame_rate;
   
-  // // Pre-process the RGB-D frame.
-  // shared_ptr<Image<u16>> final_cpu_depth_map;
-  // PreprocessFrame(frame_index, &final_depth_buffer_, &final_cpu_depth_map);
+   // Pre-process the RGB-D frame.
+   shared_ptr<Image<u16>> final_cpu_depth_map;
+   PreprocessFrame(frame_index, &final_depth_buffer_, &final_cpu_depth_map);
   
-  // // Estimate the frame's pose (unless it is the first frame).
-  // pose_estimated_ = false;
-  // if (config_.estimate_poses && base_kf_) {
-  //   RunOdometry(frame_index);
-  //   pose_estimated_ = true;
-  // }
+   // Estimate the frame's pose (unless it is the first frame).
+   pose_estimated_ = false;
+   if (config_.estimate_poses && base_kf_) {
+     RunOdometry(frame_index);
+     pose_estimated_ = true;
+   }
 
 
   // Use a very basic keyframe selection strategy: regularly select one
@@ -225,30 +222,7 @@ void BadSlam::ProcessFrame(int frame_index, bool force_keyframe) {
   //   std::cout << "request create_keyframe: " << frame_index << std::endl;
   // }
 
-  /// orbslam <
 
-  // Pass the image to the SLAM system
-  cv::Mat imRGB = const_cast<Image<Vec3u8>*>(rgb_image)->WrapInCVMat(CV_8UC3).clone();
-  cv::cvtColor(imRGB, imRGB, CV_BGR2RGB);
-
-   const Image<u16>* local_depth_image =
-      rgbd_video_->depth_frame_mutable(frame_index)->GetImage().get();
-  cv::Mat imD = const_cast<Image<u16>*>(local_depth_image)->WrapInCVMat(CV_16UC1).clone();
-  // cv::imshow("image" , imD);
-  // cv::waitKey(2);
-  
-  orbslam_system_->TrackRGBD(imRGB,imD,frame_index, create_keyframe);
-  bool need_orb_keyframe =  orbslam_system_->IsKeyframeNeeded();
-  cv::Mat Tcw = orbslam_system_->GetTracker()->mCurrentFrame.GetTcw();
-
-  
-  // direct_ba_->Lock();
-  // SE3f new_global_T_frame = vis::Converter::toSophusSE3(Tcw).inverse().cast<float>();
-  // rgbd_video_->depth_frame_mutable(frame_index)->SetGlobalTFrame(new_global_T_frame);
-  // rgbd_video_->color_frame_mutable(frame_index)->SetGlobalTFrame(new_global_T_frame);
-  // direct_ba_->Unlock();
-
-  ///  orbslam >
 
   
   // if (create_keyframe) {
@@ -256,85 +230,85 @@ void BadSlam::ProcessFrame(int frame_index, bool force_keyframe) {
   // }
     
 
-  // if (create_keyframe) {
-  //   CreateKeyframe(frame_index,
-  //                  rgb_image,
-  //                  final_cpu_depth_map,
-  //                  *final_depth_buffer_);
-  // }
+   if (create_keyframe) {
+     CreateKeyframe(frame_index,
+                    rgb_image,
+                    final_cpu_depth_map,
+                    *final_depth_buffer_);
+   }
   
-  // keyframe_created_ = create_keyframe;
+   keyframe_created_ = create_keyframe;
   
-  // // Perform bundle adjustment until convergence / reaching the maximum (planned) iteration count in offline mode,
-  // // or additionally only until the time for the current frame ran out in real-time mode.
-  // if (num_planned_ba_iterations_ > 0) {
-  //   // Is there time to do at least one iteration?
-  //   bool start_ba = true;
-  //   if (!config_.parallel_ba && config_.target_frame_rate > 0) {
-  //     double elapsed_frame_time = frame_timer_.GetTimeSinceStart();
-  //     start_ba = actual_frame_start_time_ + elapsed_frame_time < target_frame_end_time_;
-  //   }
+   // Perform bundle adjustment until convergence / reaching the maximum (planned) iteration count in offline mode,
+   // or additionally only until the time for the current frame ran out in real-time mode.
+   if (num_planned_ba_iterations_ > 0) {
+     // Is there time to do at least one iteration?
+     bool start_ba = true;
+     if (!config_.parallel_ba && config_.target_frame_rate > 0) {
+       double elapsed_frame_time = frame_timer_.GetTimeSinceStart();
+       start_ba = actual_frame_start_time_ + elapsed_frame_time < target_frame_end_time_;
+     }
     
-  //   if (start_ba) {
-  //     static int bundle_adjustment_counter = 0;
-  //     ++ bundle_adjustment_counter;
+     if (start_ba) {
+       static int bundle_adjustment_counter = 0;
+       ++ bundle_adjustment_counter;
       
-  //     direct_ba_->Lock();
-  //     usize keyframes_size = direct_ba_->keyframes().size() + queued_keyframes_.size();
-  //     direct_ba_->Unlock();
+       direct_ba_->Lock();
+       usize keyframes_size = direct_ba_->keyframes().size() + queued_keyframes_.size();
+       direct_ba_->Unlock();
       
-  //     // Decide whether to optimize intrinsics.
-  //     // TODO: This contains some heuristics which are not configurable by parameters!
-  //     // The idea for these heuristics is that at the beginning, intrinsics optimization
-  //     // is cheap (since there are few keyframes) and necessary (since the initial
-  //     // intrinsics might be somewhat off). So we do it more often at the start.
-  //     // However, we should not do it too early since there might not be enough
-  //     // data yet and the self-calibration might pick up lots of noise instead
-  //     // of converging to a good calibration.
-  //     bool optimize_depth_intrinsics =
-  //         config_.optimize_intrinsics &&
-  //         (keyframes_size >= 10 &&
-  //           (keyframes_size <= 20 ||
-  //           (bundle_adjustment_counter % config_.intrinsics_optimization_interval == 0)));
-  //     bool optimize_color_intrinsics = optimize_depth_intrinsics;
+       // Decide whether to optimize intrinsics.
+       // TODO: This contains some heuristics which are not configurable by parameters!
+       // The idea for these heuristics is that at the beginning, intrinsics optimization
+       // is cheap (since there are few keyframes) and necessary (since the initial
+       // intrinsics might be somewhat off). So we do it more often at the start.
+       // However, we should not do it too early since there might not be enough
+       // data yet and the self-calibration might pick up lots of noise instead
+       // of converging to a good calibration.
+       bool optimize_depth_intrinsics =
+           config_.optimize_intrinsics &&
+           (keyframes_size >= 10 &&
+             (keyframes_size <= 20 ||
+             (bundle_adjustment_counter % config_.intrinsics_optimization_interval == 0)));
+       bool optimize_color_intrinsics = optimize_depth_intrinsics;
       
-  //     if (config_.parallel_ba) {
-  //       // Signal to the BA thread to start BA iterations
-  //       StartParallelIterations(
-  //           num_planned_ba_iterations_,
-  //           optimize_depth_intrinsics,
-  //           optimize_color_intrinsics,
-  //           config_.do_surfel_updates,
-  //           /*optimize_poses*/ true,
-  //           /*optimize_geometry*/ true);
-  //       num_planned_ba_iterations_ = 0;
-  //     } else {
-  //       int iterations_done = 0;
-  //       bool converged = false;
-  //       RunBundleAdjustment(frame_index,
-  //                           optimize_depth_intrinsics && config_.use_geometric_residuals,
-  //                           optimize_color_intrinsics && config_.use_photometric_residuals,
-  //                           /*optimize_poses*/ true,
-  //                           /*optimize_geometry*/ true,
-  //                           /*min_iterations*/ 0,  // loop_closed ? 2 : 0
-  //                           num_planned_ba_iterations_,
-  //                           /*active_keyframe_window_start*/ config_.disable_deactivation ? 0 : -1,
-  //                           /*active_keyframe_window_end*/ config_.disable_deactivation ? (direct_ba_->keyframes().size() - 1) : -1,
-  //                           /*increase_ba_iteration_count*/ (config_.target_frame_rate == 0),
-  //                           &iterations_done,
-  //                           &converged,
-  //                           target_frame_end_time_ - actual_frame_start_time_,
-  //                           (config_.target_frame_rate > 0) ? &frame_timer_ : nullptr);
-  //       if (converged) {
-  //         num_planned_ba_iterations_ = 0;
-  //       } else {
-  //         num_planned_ba_iterations_ = std::max<int>(0, num_planned_ba_iterations_ - iterations_done);
-  //       }
+       if (config_.parallel_ba) {
+         // Signal to the BA thread to start BA iterations
+         StartParallelIterations(
+             num_planned_ba_iterations_,
+             optimize_depth_intrinsics,
+             optimize_color_intrinsics,
+             config_.do_surfel_updates,
+             /*optimize_poses*/ true,
+             /*optimize_geometry*/ true);
+         num_planned_ba_iterations_ = 0;
+       } else {
+         int iterations_done = 0;
+         bool converged = false;
+         RunBundleAdjustment(frame_index,
+                             optimize_depth_intrinsics && config_.use_geometric_residuals,
+                             optimize_color_intrinsics && config_.use_photometric_residuals,
+                             /*optimize_poses*/ true,
+                             /*optimize_geometry*/ true,
+                             /*min_iterations*/ 0,  // loop_closed ? 2 : 0
+                             num_planned_ba_iterations_,
+                             /*active_keyframe_window_start*/ config_.disable_deactivation ? 0 : -1,
+                             /*active_keyframe_window_end*/ config_.disable_deactivation ? (direct_ba_->keyframes().size() - 1) : -1,
+                             /*increase_ba_iteration_count*/ (config_.target_frame_rate == 0),
+                             &iterations_done,
+                             &converged,
+                             target_frame_end_time_ - actual_frame_start_time_,
+                             (config_.target_frame_rate > 0) ? &frame_timer_ : nullptr);
+         if (converged) {
+           num_planned_ba_iterations_ = 0;
+         } else {
+           num_planned_ba_iterations_ = std::max<int>(0, num_planned_ba_iterations_ - iterations_done);
+         }
 
 
-  //     }
-  //   }
-  // }
+       }
+     }
+   }
 
 
   
@@ -364,9 +338,6 @@ BadSlam::~BadSlam() {
   cudaStreamDestroy(stream_);
 
 
-  //orbslam
-  orbslam_system_->Shutdown();
-  orbslam_system_->SaveTrajectoryTUM("/home/pang/CameraTrajectory.txt");
 }
 
 void BadSlam::UpdateOdometryVisualization(
@@ -411,10 +382,10 @@ void BadSlam::UpdateOdometryVisualization(
 
 
   // Note:(pang) set current pose from orbslam, other elements still need change
-  // render_window_->SetCurrentFramePoseNoLock(rgbd_video_->depth_frame(frame_index)->global_T_frame().matrix());
-  cv::Mat Tcw = orbslam_system_->GetTracker()->mCurrentFrame.GetTcw();
-  Sophus::SE3f pose = vis::Converter::toSophusSE3(Tcw).cast<float>().inverse();  // show Twc
-  render_window_->SetCurrentFramePoseNoLock(pose.matrix());
+   render_window_->SetCurrentFramePoseNoLock(rgbd_video_->depth_frame(frame_index)->global_T_frame().matrix());
+//  cv::Mat Tcw = orbslam_system_->GetTracker()->mCurrentFrame.GetTcw();
+//  Sophus::SE3f pose = vis::Converter::toSophusSE3(Tcw).cast<float>().inverse();  // show Twc
+//  render_window_->SetCurrentFramePoseNoLock(pose.matrix());
 
 
   render_window_->SetEstimatedTrajectoryNoLock(std::move(estimated_trajectory));

@@ -45,6 +45,7 @@
 #include <QLineEdit>
 
 #include "badslam/bad_slam_config.h"
+#include "badslam/System.h"
 
 namespace vis {
 
@@ -176,7 +177,7 @@ class MainWindow : public QMainWindow {
   condition_variable quit_condition_;
   
   atomic<bool> bad_slam_set_;
-  unique_ptr<BadSlam> bad_slam_;
+  shared_ptr<BadSlam> bad_slam_;
   RGBDVideo<Vec3u8, u16> rgbd_video_;
   std::mutex rgbd_video_mutex_;
   
@@ -266,6 +267,8 @@ class MainWindow : public QMainWindow {
   string import_calibration_path_;
   float depth_scaling_;
   BadSlamConfig& config_;
+    // orbslam
+std::shared_ptr<vis::System> orbslam_system_;
 };
 
 }

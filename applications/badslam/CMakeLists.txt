@@ -30,6 +30,8 @@ if (CMAKE_CUDA_COMPILER)
   file(GLOB BAD_SLAM_SRC
     "src/badslam/*.h"
     "src/badslam/*.cc"
+    "src/badslam/types/*.h"
+    "src/badslam/types/*.cc"
     "src/badslam/*.cu"
     "src/badslam/*.cuh"
     "resources/*.qrc"

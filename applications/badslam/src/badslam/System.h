@@ -38,6 +38,11 @@
 #include "ORBVocabulary.h"
 #include "Viewer.h"
 
+#include "badslam/bad_slam_config.h"
+#include "badslam/render_window.h"
+#include "libvis/rgbd_video.h"
+#include "libvis/opengl_context.h"
+
 namespace vis {
     class BadSlam;
 }
@@ -65,8 +70,11 @@ public:
 public:
 
     // Initialize the SLAM system. It launches the Local Mapping, Loop Closing and Viewer threads.
-    System(const string &strVocFile, const string &strSettingsFile, const eSensor sensor, 
-            vis::BadSlam* badslam_ptr,
+    System(const BadSlamConfig& config,
+           RGBDVideo<Vec3u8, u16>* rgbd_video,
+           const shared_ptr<BadSlamRenderWindow>& render_window,
+           OpenGLContext* opengl_context,
+           const string &strVocFile, const string &strSettingsFile, const eSensor sensor,
             const bool bUseViewer = true);
 
 
@@ -124,7 +132,7 @@ public:
 
     Tracking* GetTracker() const { return mpTracker; }
     Viewer* GetViewer() const { return mpViewer; }
-    vis::BadSlam* GetBadSlam() const { return badslam_; }
+    std::shared_ptr<vis::BadSlam> GetBadSlam() const { return badslam_; }
     Map* GetMap() const { return mpMap; }
 
 private:
@@ -181,7 +189,7 @@ private:
 
     // badslam
 
-    vis::BadSlam* badslam_;
+    std::shared_ptr<vis::BadSlam> badslam_;
 };
 
 }// namespace ORB_SLAM

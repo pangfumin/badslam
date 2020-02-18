@@ -367,9 +367,6 @@ class BadSlam {
   bool valid_;
   BadSlamConfig config_;
 
-
-  // orbslam
-  std::shared_ptr<vis::System> orbslam_system_;
 };
 
 }

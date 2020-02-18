@@ -28,6 +28,9 @@
 #include <iomanip>
 #include "bad_slam.h"
 
+
+
+
 bool has_suffix(const std::string &str, const std::string &suffix) {
     std::size_t index = str.find(suffix, str.size() - suffix.size());
     return (index != std::string::npos);
@@ -36,11 +39,15 @@ bool has_suffix(const std::string &str, const std::string &suffix) {
 namespace vis
 {
 
-System::System(const string &strVocFile, const string &strSettingsFile, const eSensor sensor,
-    vis::BadSlam* badslam_ptr,
+System::System(const BadSlamConfig& config,
+               RGBDVideo<Vec3u8, u16>* rgbd_video,
+               const shared_ptr<BadSlamRenderWindow>& render_window,
+               OpenGLContext* opengl_context,
+               const string &strVocFile, const string &strSettingsFile, const eSensor sensor,
                const bool bUseViewer):mSensor(sensor),  mbReset(false),mbActivateLocalizationMode(false),
-        mbDeactivateLocalizationMode(false), badslam_(badslam_ptr)
+        mbDeactivateLocalizationMode(false)
 {
+    badslam_.reset(new BadSlam(config, rgbd_video, render_window, opengl_context));
     // Output welcome message
     cout << endl <<
     "ORB-SLAM2 Copyright (C) 2014-2016 Raul Mur-Artal, University of Zaragoza." << endl <<
@@ -98,7 +105,7 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
                              mpMap, mpKeyFrameDatabase, strSettingsFile, mSensor);
 
     //Initialize the Local Mapping thread and launch
-    mpLocalMapper = new LocalMapping(badslam_, mpMap, mSensor==MONOCULAR);
+    mpLocalMapper = new LocalMapping(badslam_.get(), mpMap, mSensor==MONOCULAR);
     mptLocalMapping = new thread(&vis::LocalMapping::Run,mpLocalMapper);
 
     //Initialize the Loop Closing thread and launch
