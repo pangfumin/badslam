@@ -47,7 +47,7 @@ KeyframeDialog::KeyframeDialog(
     int keyframe_index,
     const shared_ptr<Keyframe>& keyframe,
     const BadSlamConfig& config,
-    BadSlam* slam,
+    System* slam,
     const shared_ptr<BadSlamRenderWindow>& render_window,
     QWidget* parent)
     : QDialog(parent),

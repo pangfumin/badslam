@@ -31,12 +31,12 @@
 #include <fstream>
 #include <iomanip>
 
-#include "badslam/bad_slam.h"
+#include "badslam/System.h"
 
 namespace vis {
 
 bool SaveState(
-    const BadSlam& slam,
+    const System& slam,
     const std::string& path) {
   FILE* file = fopen(path.c_str(), "wb");
   if (!file) {
@@ -183,7 +183,7 @@ bool SaveState(
 }
 
 bool LoadState(
-    BadSlam* slam,
+    System* slam,
     const std::string& path,
     std::function<bool (int, int)> progress_function) {
   // TODO: If loading is aborted, this function should ideally not make any changes

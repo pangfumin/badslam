@@ -56,7 +56,6 @@
 #include <QTextEdit>
 #include <QInputDialog>
 
-#include "badslam/bad_slam.h"
 #include "badslam/cuda_image_processing.h"
 #include "badslam/gui_keyframe_dialog.h"
 #include "badslam/gui_settings_window.h"
@@ -462,7 +461,7 @@ MainWindow::~MainWindow() {
   
   // Deinitialize BAD SLAM before discarding the OpenGL context that it may still use
   if (bad_slam_set_) {
-      (orbslam_system_->GetBadSlam()).reset();
+      (orbslam_system_).reset();
     
     opengl_context.Deinitialize();
     opengl_context_2.Deinitialize();
@@ -487,7 +486,7 @@ void MainWindow::SaveState() {
   QSettings settings;
   settings.setValue("last_save_dir", last_save_dir_);
   
-  if (vis::SaveState(*(orbslam_system_->GetBadSlam()), path.toStdString())) {
+  if (vis::SaveState(*(orbslam_system_), path.toStdString())) {
     statusBar()->showMessage(tr("Saved state to: %1").arg(path), 3000);
   } else {
     QMessageBox::warning(this, tr("Error"), tr("Could not save state to: %1").arg(path));
@@ -523,15 +522,15 @@ void MainWindow::LoadState() {
     }
   };
   
-  if (vis::LoadState((orbslam_system_->GetBadSlam()).get(), path.toStdString(), progress_function)) {
-    frame_index_ = (orbslam_system_->GetBadSlam())->last_frame_index();
+  if (vis::LoadState((orbslam_system_).get(), path.toStdString(), progress_function)) {
+    frame_index_ = (orbslam_system_)->last_frame_index();
     
-    (orbslam_system_->GetBadSlam())->UpdateOdometryVisualization(
+    (orbslam_system_)->UpdateOdometryVisualization(
         std::max(0, static_cast<int>(frame_index_) - 1),
         show_current_frame_);
-    (orbslam_system_->GetBadSlam())->direct_ba().UpdateBAVisualization(/*stream*/ 0);
-    UpdateCurrentFrame(frame_index_ + 1, (orbslam_system_->GetBadSlam())->rgbd_video()->frame_count());
-    UpdateSurfelUsage((orbslam_system_->GetBadSlam())->direct_ba().surfel_count());
+    (orbslam_system_)->direct_ba().UpdateBAVisualization(/*stream*/ 0);
+    UpdateCurrentFrame(frame_index_ + 1, (orbslam_system_)->rgbd_video()->frame_count());
+    UpdateSurfelUsage((orbslam_system_)->direct_ba().surfel_count());
     render_window_->RenderFrame();
     
     statusBar()->showMessage(tr("Loaded state from: %1").arg(path), 3000);
@@ -574,7 +573,7 @@ void MainWindow::SaveSurfelCloud() {
   QSettings settings;
   settings.setValue("last_save_dir", last_save_dir_);
   
-  if (SavePointCloudAsPLY(/*stream*/ 0, (orbslam_system_->GetBadSlam())->direct_ba(), path.toStdString())) {
+  if (SavePointCloudAsPLY(/*stream*/ 0, (orbslam_system_)->direct_ba(), path.toStdString())) {
     statusBar()->showMessage(tr("Saved surfel point cloud to: %1").arg(path), 3000);
   } else {
     QMessageBox::warning(this, tr("Error"), tr("Could not save surfel point cloud to: %1").arg(path));
@@ -594,7 +593,7 @@ void MainWindow::SaveCalibration() {
   QSettings settings;
   settings.setValue("last_save_dir", last_save_dir_);
   
-  if (vis::SaveCalibration(/*stream*/ 0, (orbslam_system_->GetBadSlam())->direct_ba(), path.toStdString())) {
+  if (vis::SaveCalibration(/*stream*/ 0, (orbslam_system_)->direct_ba(), path.toStdString())) {
     statusBar()->showMessage(tr("Saved calibration to: %1").arg(path), 3000);
   } else {
     QMessageBox::warning(this, tr("Error"), tr("Could not save calibration to: %1").arg(path));
@@ -615,13 +614,13 @@ void MainWindow::FollowCameraChanged() {
 
 void MainWindow::SurfelDisplayModeChanged() {
   if (bad_slam_set_) {
-    (orbslam_system_->GetBadSlam())->direct_ba().SetVisualization(
+    (orbslam_system_)->direct_ba().SetVisualization(
         surfel_display_normals_action->isChecked(),
         surfel_display_descriptors_action->isChecked(),
         surfel_display_radii_action->isChecked());
     
     if (!is_running_) {
-      (orbslam_system_->GetBadSlam())->direct_ba().UpdateBAVisualization(/*stream*/ 0);
+      (orbslam_system_)->direct_ba().UpdateBAVisualization(/*stream*/ 0);
       render_window_->RenderFrame();
     }
   }
@@ -645,7 +644,7 @@ void MainWindow::ShowStateChanged() {
 void MainWindow::ShowCurrentFrameCloud() {
   show_current_frame_ = show_current_frame_cloud_act->isChecked();
   if (bad_slam_set_ && !is_running_ && frame_index_ > config_.start_frame) {
-    (orbslam_system_->GetBadSlam())->UpdateOdometryVisualization(
+    (orbslam_system_)->UpdateOdometryVisualization(
         std::max(0, static_cast<int>(frame_index_) - 1),
         show_current_frame_);
   }
@@ -743,8 +742,8 @@ void MainWindow::ShowIntrinsicsAndDepthDeformation() {
     if (sscanf(text.toStdString().c_str(), "%f %f %f %f", &parameters[0], &parameters[1], &parameters[2], &parameters[3]) != 4) {
       return;
     }
-    PinholeCamera4f color_camera = (orbslam_system_->GetBadSlam())->direct_ba().color_camera();
-    (orbslam_system_->GetBadSlam())->direct_ba().SetColorCamera(PinholeCamera4f(color_camera.width(), color_camera.height(), parameters));
+    PinholeCamera4f color_camera = (orbslam_system_)->direct_ba().color_camera();
+    (orbslam_system_)->direct_ba().SetColorCamera(PinholeCamera4f(color_camera.width(), color_camera.height(), parameters));
   });
   intrinsics_layout->addWidget(color_intrinsics_edit, 0, 1);
   
@@ -756,8 +755,8 @@ void MainWindow::ShowIntrinsicsAndDepthDeformation() {
     if (sscanf(text.toStdString().c_str(), "%f %f %f %f", &parameters[0], &parameters[1], &parameters[2], &parameters[3]) != 4) {
       return;
     }
-    PinholeCamera4f depth_camera = (orbslam_system_->GetBadSlam())->direct_ba().depth_camera();
-    (orbslam_system_->GetBadSlam())->direct_ba().SetDepthCamera(PinholeCamera4f(depth_camera.width(), depth_camera.height(), parameters));
+    PinholeCamera4f depth_camera = (orbslam_system_)->direct_ba().depth_camera();
+    (orbslam_system_)->direct_ba().SetDepthCamera(PinholeCamera4f(depth_camera.width(), depth_camera.height(), parameters));
   });
   intrinsics_layout->addWidget(depth_intrinsics_edit, 1, 1);
   
@@ -769,9 +768,9 @@ void MainWindow::ShowIntrinsicsAndDepthDeformation() {
     if (sscanf(text.toStdString().c_str(), "%f", &a) != 1) {
       return;
     }
-    DepthParameters params = (orbslam_system_->GetBadSlam())->direct_ba().depth_params();
+    DepthParameters params = (orbslam_system_)->direct_ba().depth_params();
     params.a = a;
-    (orbslam_system_->GetBadSlam())->direct_ba().SetDepthParams(params);
+    (orbslam_system_)->direct_ba().SetDepthParams(params);
   });
   intrinsics_layout->addWidget(depth_alpha_edit, 2, 1);
   
@@ -929,7 +928,7 @@ void MainWindow::MoveFrameManuallyButton(int right_left, int top_bottom, int for
     QMessageBox::warning(move_frame_manually_dialog_, tr("Error"), tr("Cannot parse the frame index."));
     return;
   }
-  if (index < 0 || index >= (orbslam_system_->GetBadSlam())->rgbd_video()->frame_count()) {
+  if (index < 0 || index >= (orbslam_system_)->rgbd_video()->frame_count()) {
     QMessageBox::warning(move_frame_manually_dialog_, tr("Error"), tr("Frame index is out of range."));
     return;
   }
@@ -944,8 +943,8 @@ void MainWindow::MoveFrameManuallyButton(int right_left, int top_bottom, int for
     QMessageBox::information(move_frame_manually_dialog_, tr("Warning"), tr("Frame index is beyond the current frame."));
   }
   
-  auto& depth_frame = (orbslam_system_->GetBadSlam())->rgbd_video()->depth_frame_mutable(index);
-  auto& color_frame = (orbslam_system_->GetBadSlam())->rgbd_video()->color_frame_mutable(index);
+  auto& depth_frame = (orbslam_system_)->rgbd_video()->depth_frame_mutable(index);
+  auto& color_frame = (orbslam_system_)->rgbd_video()->color_frame_mutable(index);
   
   SE3f global_tr_frame = depth_frame->global_T_frame();
   
@@ -967,11 +966,11 @@ void MainWindow::MoveFrameManuallyButton(int right_left, int top_bottom, int for
   // set_global_T_frame (or set_frame_T_global) function to update the
   // keyframe's cached CUDA poses.
   bool found_keyframe = false;
-  auto& keyframes = (orbslam_system_->GetBadSlam())->direct_ba().keyframes();
+  auto& keyframes = (orbslam_system_)->direct_ba().keyframes();
   for (auto& keyframe : keyframes) {
     if (keyframe && keyframe->frame_index() == index) {
       keyframe->set_global_T_frame(global_tr_frame);
-      (orbslam_system_->GetBadSlam())->direct_ba().UpdateKeyframeCoVisibility(keyframe);
+      (orbslam_system_)->direct_ba().UpdateKeyframeCoVisibility(keyframe);
       
       found_keyframe = true;
       break;
@@ -985,14 +984,14 @@ void MainWindow::MoveFrameManuallyButton(int right_left, int top_bottom, int for
   // If this frame is the current frame, reset the motion model
   if (frame_index_ == index ||
       frame_index_ == index + 1) {
-    (orbslam_system_->GetBadSlam())->ClearMotionModel(static_cast<int>(frame_index_) - 1);
+    (orbslam_system_)->ClearMotionModel(static_cast<int>(frame_index_) - 1);
   }
   
-  (orbslam_system_->GetBadSlam())->UpdateOdometryVisualization(
+  (orbslam_system_)->UpdateOdometryVisualization(
       std::max(0, static_cast<int>(frame_index_) - 1),
       show_current_frame_);
   if (found_keyframe) {
-    (orbslam_system_->GetBadSlam())->direct_ba().UpdateBAVisualization(/*stream*/ 0);
+    (orbslam_system_)->direct_ba().UpdateBAVisualization(/*stream*/ 0);
   }
   render_window_->RenderFrame();
   
@@ -1004,7 +1003,7 @@ void MainWindow::ClearMotionModel() {
     return;
   }
   
-  (orbslam_system_->GetBadSlam())->ClearMotionModel(static_cast<int>(frame_index_) - 1);
+  (orbslam_system_)->ClearMotionModel(static_cast<int>(frame_index_) - 1);
 }
 
 void MainWindow::SetFrameIndex() {
@@ -1019,19 +1018,19 @@ void MainWindow::SetFrameIndex() {
       tr("Current frame index:"),
       frame_index_,
       0,
-      (orbslam_system_->GetBadSlam())->rgbd_video()->frame_count() - 1,
+      (orbslam_system_)->rgbd_video()->frame_count() - 1,
       1,
       &ok);
   
   if (ok) {
     frame_index_ = new_frame_index;
-    (orbslam_system_->GetBadSlam())->UpdateOdometryVisualization(
+    (orbslam_system_)->UpdateOdometryVisualization(
         std::max(0, static_cast<int>(frame_index_) - 1),
         show_current_frame_);
-    UpdateCurrentFrame(frame_index_ + 1, (orbslam_system_->GetBadSlam())->rgbd_video()->frame_count());
+    UpdateCurrentFrame(frame_index_ + 1, (orbslam_system_)->rgbd_video()->frame_count());
     render_window_->RenderFrame();
     
-    (orbslam_system_->GetBadSlam())->ClearMotionModel(static_cast<int>(frame_index_) - 1);
+    (orbslam_system_)->ClearMotionModel(static_cast<int>(frame_index_) - 1);
   }
 }
 
@@ -1047,13 +1046,13 @@ void MainWindow::MergeClosestSuccessiveKeyframes() {
       tr("Approximate number of keyframes to delete:"),
       10,
       0,
-      (orbslam_system_->GetBadSlam())->direct_ba().keyframes().size() - 1,
+      (orbslam_system_)->direct_ba().keyframes().size() - 1,
       1,
       &ok);
   
   if (ok) {
-    (orbslam_system_->GetBadSlam())->direct_ba().MergeKeyframes(0, approx_merge_count);
-    (orbslam_system_->GetBadSlam())->direct_ba().UpdateBAVisualization(/*stream*/ 0);
+    (orbslam_system_)->direct_ba().MergeKeyframes(0, approx_merge_count);
+    (orbslam_system_)->direct_ba().UpdateBAVisualization(/*stream*/ 0);
     render_window_->RenderFrame();
     UpdateGPUMemoryUsage();
   }
@@ -1144,13 +1143,13 @@ void MainWindow::Settings() {
     return;
   }
   
-  (orbslam_system_->GetBadSlam())->config() = config_;
+  (orbslam_system_)->config() = config_;
   
-  (orbslam_system_->GetBadSlam())->direct_ba().SetUseDescriptorResiduals(config_.use_photometric_residuals);
-  (orbslam_system_->GetBadSlam())->direct_ba().SetUseDepthResiduals(config_.use_geometric_residuals);
-  (orbslam_system_->GetBadSlam())->direct_ba().SetMinObservationCount(config_.min_observation_count);
-  (orbslam_system_->GetBadSlam())->direct_ba().SetMinObservationCountWhileBootstrapping1(config_.min_observation_count_while_bootstrapping_1);
-  (orbslam_system_->GetBadSlam())->direct_ba().SetMinObservationCountWhileBootstrapping2(config_.min_observation_count_while_bootstrapping_2);
+  (orbslam_system_)->direct_ba().SetUseDescriptorResiduals(config_.use_photometric_residuals);
+  (orbslam_system_)->direct_ba().SetUseDepthResiduals(config_.use_geometric_residuals);
+  (orbslam_system_)->direct_ba().SetMinObservationCount(config_.min_observation_count);
+  (orbslam_system_)->direct_ba().SetMinObservationCountWhileBootstrapping1(config_.min_observation_count_while_bootstrapping_1);
+  (orbslam_system_)->direct_ba().SetMinObservationCountWhileBootstrapping2(config_.min_observation_count_while_bootstrapping_2);
 }
 
 void MainWindow::StartOrPause() {
@@ -1315,10 +1314,10 @@ void MainWindow::ManualBundleAdjustment() {
       }
     };
     
-    BadSlamConfig& config = (orbslam_system_->GetBadSlam())->config();
+    BadSlamConfig& config = (orbslam_system_)->config();
     bool old_use_pcg = config.use_pcg;
     config.use_pcg = approach_combo->currentIndex() == kPCGIndex;
-    (orbslam_system_->GetBadSlam())->RunBundleAdjustment(
+    (orbslam_system_)->RunBundleAdjustment(
         frame_index_,
         optimize_depth_intrinsics_checkbox->isChecked(),
         optimize_color_intrinsics_checkbox->isChecked(),
@@ -1327,18 +1326,18 @@ void MainWindow::ManualBundleAdjustment() {
         min_iterations,
         max_iterations,
         0,
-        (orbslam_system_->GetBadSlam())->direct_ba().keyframes().size() - 1,
+        (orbslam_system_)->direct_ba().keyframes().size() - 1,
         /*increase_ba_iteration_count*/ true,
         nullptr,
         nullptr,
         0,
         nullptr,
         pcg_max_inner_iterations,
-        (orbslam_system_->GetBadSlam())->direct_ba().keyframes().size(),
+        (orbslam_system_)->direct_ba().keyframes().size(),
         progress_function);
     config.use_pcg = old_use_pcg;
     
-    (orbslam_system_->GetBadSlam())->UpdateOdometryVisualization(
+    (orbslam_system_)->UpdateOdometryVisualization(
         std::max(0, static_cast<int>(frame_index_) - 1),
         show_current_frame_);
     
@@ -1362,12 +1361,12 @@ void MainWindow::DensifySurfels() {
   
   QGridLayout* settings_layout = new QGridLayout();
   
-  QLabel* surfel_creation_cell_size_label = new QLabel(tr("Surfel creation cell size (in SLAM: %1; densest: 1): ").arg((orbslam_system_->GetBadSlam())->direct_ba().sparse_surfel_cell_size()));
+  QLabel* surfel_creation_cell_size_label = new QLabel(tr("Surfel creation cell size (in SLAM: %1; densest: 1): ").arg((orbslam_system_)->direct_ba().sparse_surfel_cell_size()));
   QLineEdit* surfel_creation_cell_size_edit = new QLineEdit("1");
   settings_layout->addWidget(surfel_creation_cell_size_label, 0, 0);
   settings_layout->addWidget(surfel_creation_cell_size_edit, 0, 1);
   
-  QLabel* minimum_observation_count_label = new QLabel(tr("Minimum observation count (in SLAM: %1; densest: 1): ").arg((orbslam_system_->GetBadSlam())->direct_ba().min_observation_count()));
+  QLabel* minimum_observation_count_label = new QLabel(tr("Minimum observation count (in SLAM: %1; densest: 1): ").arg((orbslam_system_)->direct_ba().min_observation_count()));
   QLineEdit* minimum_observation_count_edit = new QLineEdit("1");
   settings_layout->addWidget(minimum_observation_count_label, 1, 0);
   settings_layout->addWidget(minimum_observation_count_edit, 1, 1);
@@ -1412,43 +1411,43 @@ void MainWindow::DensifySurfels() {
   }
   
   // Show a progress bar while the computation below is running.
-  QProgressDialog progress(tr("Densifying surfels ..."), tr("Stop"), 0, (orbslam_system_->GetBadSlam())->direct_ba().keyframes().size(), this);
+  QProgressDialog progress(tr("Densifying surfels ..."), tr("Stop"), 0, (orbslam_system_)->direct_ba().keyframes().size(), this);
   progress.setWindowModality(Qt::WindowModal);
   progress.setMinimumDuration(0);
   
   // Upscale the cfactor buffer to full resolution (since it uses the same
   // sparsification as the surfels).
-  CUDABufferPtr<float> cfactor_buffer = (orbslam_system_->GetBadSlam())->direct_ba().cfactor_buffer();
+  CUDABufferPtr<float> cfactor_buffer = (orbslam_system_)->direct_ba().cfactor_buffer();
   CUDABufferPtr<float> scaled_cfactor_buffer(new CUDABuffer<float>(
-      ((orbslam_system_->GetBadSlam())->direct_ba().depth_camera().height() - 1) / reconstruction_sparse_surfel_cell_size + 1,
-      ((orbslam_system_->GetBadSlam())->direct_ba().depth_camera().width() - 1) / reconstruction_sparse_surfel_cell_size + 1));
+      ((orbslam_system_)->direct_ba().depth_camera().height() - 1) / reconstruction_sparse_surfel_cell_size + 1,
+      ((orbslam_system_)->direct_ba().depth_camera().width() - 1) / reconstruction_sparse_surfel_cell_size + 1));
   // TODO: Exclude pixels with zero observations from the interpolation
   //       (Note that we currently don't even store the observation count ...)
   UpscaleBufferBilinearly(/*stream*/ 0, *cfactor_buffer, scaled_cfactor_buffer.get());
-  (orbslam_system_->GetBadSlam())->direct_ba().SetCFactorBuffer(scaled_cfactor_buffer);
+  (orbslam_system_)->direct_ba().SetCFactorBuffer(scaled_cfactor_buffer);
   
   // Run geometry-only BA without sparsification and without the descriptor residuals.
   // Use a sliding window for activating the keyframes to avoid allocating
   // a large number of surfels as an intermediate step.
-  bool old_use_photometric_residuals = (orbslam_system_->GetBadSlam())->direct_ba().use_descriptor_residuals();
-  (orbslam_system_->GetBadSlam())->direct_ba().SetUseDescriptorResiduals(false);
+  bool old_use_photometric_residuals = (orbslam_system_)->direct_ba().use_descriptor_residuals();
+  (orbslam_system_)->direct_ba().SetUseDescriptorResiduals(false);
   
-  int old_sparse_surfel_cell_size = (orbslam_system_->GetBadSlam())->direct_ba().sparse_surfel_cell_size();
-  (orbslam_system_->GetBadSlam())->direct_ba().SetSparsificationSideFactor(reconstruction_sparse_surfel_cell_size);
+  int old_sparse_surfel_cell_size = (orbslam_system_)->direct_ba().sparse_surfel_cell_size();
+  (orbslam_system_)->direct_ba().SetSparsificationSideFactor(reconstruction_sparse_surfel_cell_size);
   
-  int old_minimum_observation_count = (orbslam_system_->GetBadSlam())->direct_ba().min_observation_count();
-  int old_minimum_observation_count1 = (orbslam_system_->GetBadSlam())->direct_ba().min_observation_count_while_bootstrapping_1();
-  int old_minimum_observation_count2 = (orbslam_system_->GetBadSlam())->direct_ba().min_observation_count_while_bootstrapping_2();
-  (orbslam_system_->GetBadSlam())->direct_ba().SetMinObservationCount(reconstruction_minimum_observation_count);
-  (orbslam_system_->GetBadSlam())->direct_ba().SetMinObservationCountWhileBootstrapping1(reconstruction_minimum_observation_count);
-  (orbslam_system_->GetBadSlam())->direct_ba().SetMinObservationCountWhileBootstrapping2(reconstruction_minimum_observation_count);
+  int old_minimum_observation_count = (orbslam_system_)->direct_ba().min_observation_count();
+  int old_minimum_observation_count1 = (orbslam_system_)->direct_ba().min_observation_count_while_bootstrapping_1();
+  int old_minimum_observation_count2 = (orbslam_system_)->direct_ba().min_observation_count_while_bootstrapping_2();
+  (orbslam_system_)->direct_ba().SetMinObservationCount(reconstruction_minimum_observation_count);
+  (orbslam_system_)->direct_ba().SetMinObservationCountWhileBootstrapping1(reconstruction_minimum_observation_count);
+  (orbslam_system_)->direct_ba().SetMinObservationCountWhileBootstrapping2(reconstruction_minimum_observation_count);
   
-  bool old_do_surfel_updates = (orbslam_system_->GetBadSlam())->config().do_surfel_updates;
-  (orbslam_system_->GetBadSlam())->config().do_surfel_updates = true;
+  bool old_do_surfel_updates = (orbslam_system_)->config().do_surfel_updates;
+  (orbslam_system_)->config().do_surfel_updates = true;
   
   constexpr int kWindowSize = 16;
   for (int window_start_index = - kWindowSize / 2;
-      window_start_index < static_cast<int>((orbslam_system_->GetBadSlam())->direct_ba().keyframes().size());
+      window_start_index < static_cast<int>((orbslam_system_)->direct_ba().keyframes().size());
       window_start_index += kWindowSize / 2) {
     progress.setValue(std::max(0, window_start_index));
     if (progress.wasCanceled()) {
@@ -1461,7 +1460,7 @@ void MainWindow::DensifySurfels() {
     //       end (and they have to be updated with the new
     //       sparse_surfel_cell_size). Make a separate function to update
     //       this?
-    (orbslam_system_->GetBadSlam())->RunBundleAdjustment(
+    (orbslam_system_)->RunBundleAdjustment(
         /*frame_index*/ std::max(0, static_cast<int>(frame_index_) - 1),
         /*optimize_depth_intrinsics*/ false,
         /*optimize_color_intrinsics*/ false,
@@ -1474,22 +1473,22 @@ void MainWindow::DensifySurfels() {
         /*increase_ba_iteration_count*/ true,
         nullptr, nullptr, 0, nullptr);
     
-    UpdateSurfelUsage((orbslam_system_->GetBadSlam())->direct_ba().surfel_count());
+    UpdateSurfelUsage((orbslam_system_)->direct_ba().surfel_count());
   }
   
-  (orbslam_system_->GetBadSlam())->direct_ba().AssignColors(/*stream*/ 0);
+  (orbslam_system_)->direct_ba().AssignColors(/*stream*/ 0);
   
   // Reset changed settings
-  (orbslam_system_->GetBadSlam())->direct_ba().SetCFactorBuffer(cfactor_buffer);
-  (orbslam_system_->GetBadSlam())->direct_ba().SetSparsificationSideFactor(old_sparse_surfel_cell_size);
-  (orbslam_system_->GetBadSlam())->direct_ba().SetMinObservationCount(old_minimum_observation_count);
-  (orbslam_system_->GetBadSlam())->direct_ba().SetMinObservationCountWhileBootstrapping1(old_minimum_observation_count1);
-  (orbslam_system_->GetBadSlam())->direct_ba().SetMinObservationCountWhileBootstrapping2(old_minimum_observation_count2);
-  (orbslam_system_->GetBadSlam())->direct_ba().SetUseDescriptorResiduals(old_use_photometric_residuals);
-  (orbslam_system_->GetBadSlam())->config().do_surfel_updates = old_do_surfel_updates;
+  (orbslam_system_)->direct_ba().SetCFactorBuffer(cfactor_buffer);
+  (orbslam_system_)->direct_ba().SetSparsificationSideFactor(old_sparse_surfel_cell_size);
+  (orbslam_system_)->direct_ba().SetMinObservationCount(old_minimum_observation_count);
+  (orbslam_system_)->direct_ba().SetMinObservationCountWhileBootstrapping1(old_minimum_observation_count1);
+  (orbslam_system_)->direct_ba().SetMinObservationCountWhileBootstrapping2(old_minimum_observation_count2);
+  (orbslam_system_)->direct_ba().SetUseDescriptorResiduals(old_use_photometric_residuals);
+  (orbslam_system_)->config().do_surfel_updates = old_do_surfel_updates;
   
   // Update display
-  (orbslam_system_->GetBadSlam())->direct_ba().UpdateBAVisualization(/*stream*/ 0);
+  (orbslam_system_)->direct_ba().UpdateBAVisualization(/*stream*/ 0);
   render_window_->RenderFrame();
 }
 
@@ -1533,7 +1532,7 @@ void MainWindow::ClickedKeyframe(int index) {
     return;
   }
   
-  auto& keyframes = (orbslam_system_->GetBadSlam())->direct_ba().keyframes();
+  auto& keyframes = (orbslam_system_)->direct_ba().keyframes();
   if (index < 0 ||
       index >= keyframes.size() ||
       !keyframes[index]) {
@@ -1541,12 +1540,12 @@ void MainWindow::ClickedKeyframe(int index) {
   }
   
   if (delete_keyframe_act->isChecked()) {
-    // (orbslam_system_->GetBadSlam())->direct_ba().DeleteKeyframe(index, (orbslam_system_->GetBadSlam())->loop_detector());
-    (orbslam_system_->GetBadSlam())->direct_ba().DeleteKeyframe(index);
-    (orbslam_system_->GetBadSlam())->direct_ba().UpdateBAVisualization(/*stream*/ 0);
+    // (orbslam_system_)->direct_ba().DeleteKeyframe(index, (orbslam_system_)->loop_detector());
+    (orbslam_system_)->direct_ba().DeleteKeyframe(index);
+    (orbslam_system_)->direct_ba().UpdateBAVisualization(/*stream*/ 0);
     render_window_->RenderFrame();
   } else if (select_keyframe_act->isChecked()) {
-    KeyframeDialog* dialog = new KeyframeDialog(&frame_index_, index, keyframes[index], config_,  (orbslam_system_->GetBadSlam()).get(), render_window_, this);
+    KeyframeDialog* dialog = new KeyframeDialog(&frame_index_, index, keyframes[index], config_,  (orbslam_system_).get(), render_window_, this);
     dialog->show();
   }
 }
@@ -1725,7 +1724,7 @@ void MainWindow::WorkerThreadMain() {
   bad_slam_set_ = true;
   
   if (!import_calibration_path_.empty()) {
-    if (!LoadCalibration(&(orbslam_system_->GetBadSlam())->direct_ba(), import_calibration_path_)) {
+    if (!LoadCalibration(&(orbslam_system_)->direct_ba(), import_calibration_path_)) {
       unique_lock<mutex> lock(run_mutex_);
       quit_done_ = true;
       lock.unlock();
@@ -1735,14 +1734,14 @@ void MainWindow::WorkerThreadMain() {
     }
   }
   
-  render_window_->SetDirectBA(&(orbslam_system_->GetBadSlam())->direct_ba());
+  render_window_->SetDirectBA(&(orbslam_system_)->direct_ba());
   
-  (orbslam_system_->GetBadSlam())->direct_ba().SetVisualization(
+  (orbslam_system_)->direct_ba().SetVisualization(
       surfel_display_normals_action->isChecked(),
       surfel_display_descriptors_action->isChecked(),
       surfel_display_radii_action->isChecked());
   
-  (orbslam_system_->GetBadSlam())->direct_ba().SetIntrinsicsUpdatedCallback([&]() {
+  (orbslam_system_)->direct_ba().SetIntrinsicsUpdatedCallback([&]() {
     if (std::this_thread::get_id() == gui_thread_id_) {
       IntrinsicsUpdated();
     } else {
@@ -1752,7 +1751,7 @@ void MainWindow::WorkerThreadMain() {
   
   emit UpdateCurrentFrameSignal(0, rgbd_video_.frame_count());
   emit UpdateGPUMemoryUsageSignal();
-  emit UpdateSurfelUsageSignal((orbslam_system_->GetBadSlam())->direct_ba().surfel_count());
+  emit UpdateSurfelUsageSignal((orbslam_system_)->direct_ba().surfel_count());
   
   if (run_) {
     unique_lock<mutex> lock(run_mutex_);
@@ -1783,8 +1782,8 @@ void MainWindow::WorkerThreadMain() {
       }
       
       // Stop SLAM and update GUI
-      (orbslam_system_->GetBadSlam())->StopBAThreadAndWaitForIt();
-      emit UpdateSurfelUsageSignal((orbslam_system_->GetBadSlam())->direct_ba().surfel_count());
+      (orbslam_system_)->StopBAThreadAndWaitForIt();
+      emit UpdateSurfelUsageSignal((orbslam_system_)->direct_ba().surfel_count());
       emit RunStateChangedSignal(false);  // blocking queued connection
       
       while (!run_ && !quit_requested_) {
@@ -1796,8 +1795,8 @@ void MainWindow::WorkerThreadMain() {
       
       // Restart SLAM and update GUI
       emit RunStateChangedSignal(true);  // blocking queued connection
-      if ((orbslam_system_->GetBadSlam())->config().parallel_ba && !skip_frame_) {
-        (orbslam_system_->GetBadSlam())->RestartBAThread();
+      if ((orbslam_system_)->config().parallel_ba && !skip_frame_) {
+        (orbslam_system_)->RestartBAThread();
       }
     }
     lock.unlock();
@@ -1831,9 +1830,9 @@ void MainWindow::WorkerThreadMain() {
       rgbd_video_.depth_frame_mutable(frame_index_)->SetGlobalTFrame(prev_global_T_frame);
       
       // Preprocess the frame such that its point cloud visualization will be available
-      (orbslam_system_->GetBadSlam())->PreprocessFrame(frame_index_, &(orbslam_system_->GetBadSlam())->final_depth_buffer(), nullptr);
+      (orbslam_system_)->PreprocessFrame(frame_index_, &(orbslam_system_)->final_depth_buffer(), nullptr);
     } else {
-      (orbslam_system_->GetBadSlam())->ProcessFrame(frame_index_, create_kf_);
+      (orbslam_system_)->ProcessFrame(frame_index_, create_kf_);
 
         /// orbslam <
 
@@ -1865,14 +1864,14 @@ void MainWindow::WorkerThreadMain() {
     // Optionally, visualize the input images.
     emit UpdateCurrentFrameImagesSignal(frame_index_, true);
    // Update the 3D visualization.
-    (orbslam_system_->GetBadSlam())->UpdateOdometryVisualization(frame_index_, show_current_frame_);
-//    (orbslam_system_->GetBadSlam())->orbslam_system_->GetViewer()->Run();
+    (orbslam_system_)->UpdateOdometryVisualization(frame_index_, show_current_frame_);
+//    (orbslam_system_)->orbslam_system_->GetViewer()->Run();
     
  
     
     // Measure the frame time, and optionally restrict the frames per second.
     if (!skip_frame_) {
-      (orbslam_system_->GetBadSlam())->EndFrame();
+      (orbslam_system_)->EndFrame();
     }
     
     // Release memory.
@@ -1882,7 +1881,7 @@ void MainWindow::WorkerThreadMain() {
     
     emit UpdateCurrentFrameSignal(frame_index_ + 1, rgbd_video_.frame_count());
     emit UpdateGPUMemoryUsageSignal();
-    emit UpdateSurfelUsageSignal((orbslam_system_->GetBadSlam())->direct_ba().surfel_count());
+    emit UpdateSurfelUsageSignal((orbslam_system_)->direct_ba().surfel_count());
   }  // end of main loop
   
   pre_load_thread.RequestExitAndWaitForIt();
@@ -1891,14 +1890,14 @@ void MainWindow::WorkerThreadMain() {
   // supposed to be waiting in this case, so calling a blocking queued
   // connection would deadlock).
   if (!quit_requested_) {
-    (orbslam_system_->GetBadSlam())->StopBAThreadAndWaitForIt();
+    (orbslam_system_)->StopBAThreadAndWaitForIt();
     
     // Disable run buttons since the dataset finished.
     emit RunStateChangedSignal(false);  // blocking queued connection
     emit DatasetPlaybackFinishedSignal();
     
     // Do a final surfel count update
-    emit UpdateSurfelUsageSignal((orbslam_system_->GetBadSlam())->direct_ba().surfel_count());
+    emit UpdateSurfelUsageSignal((orbslam_system_)->direct_ba().surfel_count());
   }
   
   SwitchOpenGLContext(no_opengl_context);
@@ -1959,14 +1958,14 @@ void MainWindow::IntrinsicsUpdated() {
     return;
   }
   
-  PinholeCamera4f color_camera = (orbslam_system_->GetBadSlam())->direct_ba().color_camera();
+  PinholeCamera4f color_camera = (orbslam_system_)->direct_ba().color_camera();
   color_intrinsics_edit->setText(
       QString::number(color_camera.parameters()[0], 'g', 14) + " " +
       QString::number(color_camera.parameters()[1], 'g', 14) + " " +
       QString::number(color_camera.parameters()[2], 'g', 14) + " " +
       QString::number(color_camera.parameters()[3], 'g', 14));
   
-  PinholeCamera4f depth_camera = (orbslam_system_->GetBadSlam())->direct_ba().depth_camera();
+  PinholeCamera4f depth_camera = (orbslam_system_)->direct_ba().depth_camera();
   depth_intrinsics_edit->setText(
       QString::number(depth_camera.parameters()[0], 'g', 14) + " " +
       QString::number(depth_camera.parameters()[1], 'g', 14) + " " +
@@ -1974,10 +1973,10 @@ void MainWindow::IntrinsicsUpdated() {
       QString::number(depth_camera.parameters()[3], 'g', 14));
   
   depth_alpha_edit->setText(
-      QString::number((orbslam_system_->GetBadSlam())->direct_ba().depth_params().a, 'g', 14));
+      QString::number((orbslam_system_)->direct_ba().depth_params().a, 'g', 14));
   
   // Visualize depth deformation
-  const auto& cfactor_buffer = (orbslam_system_->GetBadSlam())->direct_ba().cfactor_buffer();
+  const auto& cfactor_buffer = (orbslam_system_)->direct_ba().cfactor_buffer();
   Image<float> cfactor_buffer_cpu(cfactor_buffer->width(), cfactor_buffer->height());
   cfactor_buffer->DownloadAsync(0, &cfactor_buffer_cpu);
   
@@ -1994,8 +1993,8 @@ void MainWindow::IntrinsicsUpdated() {
     }
   }
   
-  float depth_1 = RawToCalibratedDepth((orbslam_system_->GetBadSlam())->direct_ba().depth_params().a, min_cfactor, 3.0f);
-  float depth_2 = RawToCalibratedDepth((orbslam_system_->GetBadSlam())->direct_ba().depth_params().a, max_cfactor, 3.0f);
+  float depth_1 = RawToCalibratedDepth((orbslam_system_)->direct_ba().depth_params().a, min_cfactor, 3.0f);
+  float depth_2 = RawToCalibratedDepth((orbslam_system_)->direct_ba().depth_params().a, max_cfactor, 3.0f);
   min_max_calibrated_depth_label->setText(tr("Min / max calibrated depth for 3m uncalibrated depth: %1 / %2")
       .arg(std::min(depth_1, depth_2))
       .arg(std::max(depth_1, depth_2)));
@@ -2009,7 +2008,7 @@ void MainWindow::IntrinsicsUpdated() {
       // Intensity based on distortion at 1m depth.
       constexpr float kVisualizationDepth = 1.0f;
       constexpr float max_displayed_deviation = 0.01f;
-      float calib_depth = RawToCalibratedDepth((orbslam_system_->GetBadSlam())->direct_ba().depth_params().a, cfactor, kVisualizationDepth);
+      float calib_depth = RawToCalibratedDepth((orbslam_system_)->direct_ba().depth_params().a, cfactor, kVisualizationDepth);
       u8 intensity = 255.99f * std::min(1.0f, fabs(calib_depth - kVisualizationDepth) / max_displayed_deviation);
       
       if (calib_depth > kVisualizationDepth) {

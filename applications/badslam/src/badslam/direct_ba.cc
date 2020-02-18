@@ -41,7 +41,7 @@
 #include <libvis/image_display.h>
 #include <libvis/timing.h>
 
-#include "badslam/bad_slam.h"
+#include "badslam/System.h"
 #include "badslam/convergence_analysis.h"
 #include "badslam/util.cuh"
 // #include "badslam/loop_detector.h"

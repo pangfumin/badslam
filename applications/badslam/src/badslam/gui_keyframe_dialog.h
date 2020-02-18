@@ -32,7 +32,7 @@
 
 #include <QDialog>
 
-#include "badslam/bad_slam.h"
+#include "badslam/System.h"
 #include "badslam/bad_slam_config.h"
 #include "badslam/keyframe.h"
 
@@ -46,7 +46,7 @@ class KeyframeDialog : public QDialog {
       int keyframe_index,
       const shared_ptr<Keyframe>& keyframe,
       const BadSlamConfig& config,
-      BadSlam* slam,
+      System* slam,
       const shared_ptr<BadSlamRenderWindow>& render_window,
       QWidget* parent = nullptr);
   
@@ -56,7 +56,7 @@ class KeyframeDialog : public QDialog {
  private:
   atomic<usize>* current_frame_index_;
   shared_ptr<Keyframe> keyframe_;
-  BadSlam* slam_;
+  System* slam_;
   const BadSlamConfig& config_;
   shared_ptr<BadSlamRenderWindow> render_window_;
 };

@@ -34,20 +34,21 @@
 #include <libvis/rgbd_video.h>
 
 #include "badslam/direct_ba.h"
+#include "badslam/System.h"
 
 namespace vis {
 
 // Saves the complete SLAM state to a binary file.
 // TODO: Use a well-defined endianness.
 bool SaveState(
-    const BadSlam& slam,
+    const System& slam,
     const std::string& path);
 
 // Loads the complete SLAM state from a binary file (that was saved with
 // SaveState()).
 // TODO: Use a well-defined endianness.
 bool LoadState(
-    BadSlam* slam,
+            System* slam,
     const std::string& path,
     std::function<bool (int, int)> progress_function = nullptr);
 

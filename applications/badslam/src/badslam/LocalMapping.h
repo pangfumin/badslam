@@ -28,7 +28,6 @@
 #include "KeyFrameDatabase.h"
 
 #include <mutex>
-#include "bad_slam.h"
 
 namespace vis
 {
@@ -40,7 +39,7 @@ class Map;
 class LocalMapping
 {
 public:
-    LocalMapping(vis::BadSlam* badslam, Map* pMap, const float bMonocular);
+    LocalMapping( Map* pMap, const float bMonocular);
 
     void SetLoopCloser(LoopClosing* pLoopCloser);
 
@@ -123,7 +122,6 @@ protected:
     bool mbAcceptKeyFrames;
     std::mutex mMutexAccept;
 
-    vis::BadSlam* bad_slam_;
 };
 
 } //namespace ORB_SLAM

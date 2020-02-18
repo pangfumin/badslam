@@ -28,7 +28,7 @@
 
 #include "libvis/camera.h"
 #include "render_window.h"
-#include "bad_slam.h"
+//#include "bad_slam.h"
 #include "direct_ba.h"
 #include "Converter.h"
 #include "libvis/point_cloud.h"
@@ -68,16 +68,16 @@ void Viewer::Run()
 
     // cudaEventRecord(update_visualization_pre_event_, stream_);
     
-    mpSystem->GetBadSlam()->direct_ba_->Lock();
+    mpSystem->direct_ba_->Lock();
     
-    vis::PinholeCamera4f depth_camera = mpSystem->GetBadSlam()->direct_ba_->depth_camera_no_lock();
+    vis::PinholeCamera4f depth_camera = mpSystem->direct_ba_->depth_camera_no_lock();
     
-    mpSystem->GetBadSlam()->direct_ba_->Unlock();
+    mpSystem->direct_ba_->Unlock();
     
     
-    unique_lock<mutex> render_mutex_lock(mpSystem->GetBadSlam()->render_window_->render_mutex());
+    unique_lock<mutex> render_mutex_lock(mpSystem->render_window_->render_mutex());
     
-    mpSystem->GetBadSlam()->render_window_->SetCameraNoLock(depth_camera);
+    mpSystem->render_window_->SetCameraNoLock(depth_camera);
     // if (ba_thread_) {
     //     render_window_->SetQueuedKeyframePosesNoLock(std::move(keyframe_poses), std::move(keyframe_ids));
     // }
@@ -86,7 +86,7 @@ void Viewer::Run()
     // 1. set current pose 
     cv::Mat Tcw = mpTracker->mCurrentFrame.GetTcw();
     Sophus::SE3f pose = vis::Converter::toSophusSE3(Tcw).cast<float>().inverse();  // show Twc
-    mpSystem->GetBadSlam()->render_window_->SetCurrentFramePoseNoLock(pose.matrix());
+    mpSystem->render_window_->SetCurrentFramePoseNoLock(pose.matrix());
 
 
     // render_window_->SetEstimatedTrajectoryNoLock(std::move(estimated_trajectory));
@@ -107,12 +107,12 @@ void Viewer::Run()
         keyframe_ids.push_back(vpKFs[i]->mnFrameId);
     }
     
-    mpSystem->GetBadSlam()->render_window_->SetKeyframePosesNoLock(std::move(keyframe_poses), std::move(keyframe_ids));
+    mpSystem->render_window_->SetKeyframePosesNoLock(std::move(keyframe_poses), std::move(keyframe_ids));
 
 
     render_mutex_lock.unlock();
     
-    mpSystem->GetBadSlam()->render_window_->RenderFrame();
+    mpSystem->render_window_->RenderFrame();
 
       // 3. visualize mappoint
     const vector<MapPoint*> &vpMPs = mpSystem->GetMap()->GetAllMapPoints();
@@ -134,10 +134,10 @@ void Viewer::Run()
 
 
     
-    mpSystem->GetBadSlam()->render_window_->SetFramePointCloud(
+    mpSystem->render_window_->SetFramePointCloud(
         current_frame_cloud,
         Sophus::SE3f());
-    mpSystem->GetBadSlam()->render_window_->RenderFrame();
+    mpSystem->render_window_->RenderFrame();
 
 }
 
