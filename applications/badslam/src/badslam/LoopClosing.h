@@ -21,7 +21,7 @@
 #ifndef LOOPCLOSING_H
 #define LOOPCLOSING_H
 
-#include "KeyFrame.h"
+#include "SparseKeyFrame.h"
 #include "LocalMapping.h"
 #include "Map.h"
 #include "ORBVocabulary.h"
@@ -45,9 +45,9 @@ class LoopClosing
 {
 public:
 
-    typedef pair<set<KeyFrame*>,int> ConsistentGroup;    
-    typedef map<KeyFrame*,g2o::Sim3,std::less<KeyFrame*>,
-        Eigen::aligned_allocator<std::pair<const KeyFrame*, g2o::Sim3> > > KeyFrameAndPose;
+    typedef pair<set<SparseKeyFrame*>,int> ConsistentGroup;
+    typedef map<SparseKeyFrame*,g2o::Sim3,std::less<SparseKeyFrame*>,
+        Eigen::aligned_allocator<std::pair<const SparseKeyFrame*, g2o::Sim3> > > KeyFrameAndPose;
 
 public:
 
@@ -60,7 +60,7 @@ public:
     // Main function
     void Run();
 
-    void InsertKeyFrame(KeyFrame *pKF);
+    void InsertKeyFrame(SparseKeyFrame *pKF);
 
     void RequestReset();
 
@@ -112,7 +112,7 @@ protected:
 
     LocalMapping *mpLocalMapper;
 
-    std::list<KeyFrame*> mlpLoopKeyFrameQueue;
+    std::list<SparseKeyFrame*> mlpLoopKeyFrameQueue;
 
     std::mutex mMutexLoopQueue;
 
@@ -120,11 +120,11 @@ protected:
     float mnCovisibilityConsistencyTh;
 
     // Loop detector variables
-    KeyFrame* mpCurrentKF;
-    KeyFrame* mpMatchedKF;
+    SparseKeyFrame* mpCurrentKF;
+    SparseKeyFrame* mpMatchedKF;
     std::vector<ConsistentGroup> mvConsistentGroups;
-    std::vector<KeyFrame*> mvpEnoughConsistentCandidates;
-    std::vector<KeyFrame*> mvpCurrentConnectedKFs;
+    std::vector<SparseKeyFrame*> mvpEnoughConsistentCandidates;
+    std::vector<SparseKeyFrame*> mvpCurrentConnectedKFs;
     std::vector<MapPoint*> mvpCurrentMatchedPoints;
     std::vector<MapPoint*> mvpLoopMapPoints;
     cv::Mat mScw;

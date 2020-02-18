@@ -387,8 +387,8 @@ void System::SaveTrajectoryTUM(const string &filename)
         return;
     }
 
-    vector<KeyFrame*> vpKFs = mpMap->GetAllKeyFrames();
-    sort(vpKFs.begin(),vpKFs.end(),KeyFrame::lId);
+    vector<SparseKeyFrame*> vpKFs = mpMap->GetAllKeyFrames();
+    sort(vpKFs.begin(),vpKFs.end(),SparseKeyFrame::lId);
 
     // Transform all keyframes so that the first keyframe is at the origin.
     // After a loop closure the first keyframe might not be at the origin.
@@ -404,7 +404,7 @@ void System::SaveTrajectoryTUM(const string &filename)
 
     // For each frame we have a reference keyframe (lRit), the timestamp (lT) and a flag
     // which is true when tracking failed (lbL).
-    list<vis::KeyFrame*>::iterator lRit = mpTracker->mlpReferences.begin();
+    list<vis::SparseKeyFrame*>::iterator lRit = mpTracker->mlpReferences.begin();
     list<double>::iterator lT = mpTracker->mlFrameTimes.begin();
     list<bool>::iterator lbL = mpTracker->mlbLost.begin();
     for(list<cv::Mat>::iterator lit=mpTracker->mlRelativeFramePoses.begin(),
@@ -413,7 +413,7 @@ void System::SaveTrajectoryTUM(const string &filename)
         if(*lbL)
             continue;
 
-        KeyFrame* pKF = *lRit;
+        SparseKeyFrame* pKF = *lRit;
 
         cv::Mat Trw = cv::Mat::eye(4,4,CV_32F);
 
@@ -443,8 +443,8 @@ void System::SaveKeyFrameTrajectoryTUM(const string &filename)
 {
     cout << endl << "Saving keyframe trajectory to " << filename << " ..." << endl;
 
-    vector<KeyFrame*> vpKFs = mpMap->GetAllKeyFrames();
-    sort(vpKFs.begin(),vpKFs.end(),KeyFrame::lId);
+    vector<SparseKeyFrame*> vpKFs = mpMap->GetAllKeyFrames();
+    sort(vpKFs.begin(),vpKFs.end(),SparseKeyFrame::lId);
 
     // Transform all keyframes so that the first keyframe is at the origin.
     // After a loop closure the first keyframe might not be at the origin.
@@ -456,7 +456,7 @@ void System::SaveKeyFrameTrajectoryTUM(const string &filename)
 
     for(size_t i=0; i<vpKFs.size(); i++)
     {
-        KeyFrame* pKF = vpKFs[i];
+        SparseKeyFrame* pKF = vpKFs[i];
 
        // pKF->SetPose(pKF->GetPose()*Two);
 
@@ -526,23 +526,11 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
             pose_estimated_ = true;
         }
 
-
         // Use a very basic keyframe selection strategy: regularly select one
         // keyframe every keyframe_interval frames.
         bool create_keyframe =
                 force_keyframe ||
                 ((frame_index - config_.start_frame) % config_.keyframe_interval == 0);
-
-        // if(create_keyframe) {
-        //   std::cout << "request create_keyframe: " << frame_index << std::endl;
-        // }
-
-
-
-
-        // if (create_keyframe) {
-        //   std::cout << "[BAD]: need_keyframe: " << create_keyframe << std::endl;
-        // }
 
 
         if (create_keyframe) {
@@ -1212,6 +1200,8 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
         PinholeCamera4f color_camera = direct_ba_->color_camera_no_lock();
         PinholeCamera4f depth_camera = direct_ba_->depth_camera_no_lock();
         DepthParameters depth_params = direct_ba_->depth_params_no_lock();
+
+
         direct_ba_->Unlock();
 
         CalibrateDepthAndTransformColorToDepthCUDA(

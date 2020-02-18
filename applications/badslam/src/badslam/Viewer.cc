@@ -92,7 +92,7 @@ void Viewer::Run()
     // render_window_->SetEstimatedTrajectoryNoLock(std::move(estimated_trajectory));
 
     //  2. render keyframe
-    const vector<KeyFrame*> vpKFs = mpSystem->GetMap()->GetAllKeyFrames();
+    const vector<SparseKeyFrame*> vpKFs = mpSystem->GetMap()->GetAllKeyFrames();
     vector<Eigen::Matrix4f> keyframe_poses;
     vector<int> keyframe_ids;
     

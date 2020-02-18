@@ -21,7 +21,7 @@
 #ifndef MAPPOINT_H
 #define MAPPOINT_H
 
-#include"KeyFrame.h"
+#include "SparseKeyFrame.h"
 #include"Frame.h"
 #include"Map.h"
 
@@ -31,7 +31,7 @@
 namespace vis
 {
 
-class KeyFrame;
+class SparseKeyFrame;
 class Map;
 class Frame;
 
@@ -39,23 +39,23 @@ class Frame;
 class MapPoint
 {
 public:
-    MapPoint(const cv::Mat &Pos, KeyFrame* pRefKF, Map* pMap);
+    MapPoint(const cv::Mat &Pos, SparseKeyFrame* pRefKF, Map* pMap);
     MapPoint(const cv::Mat &Pos,  Map* pMap, Frame* pFrame, const int &idxF);
 
     void SetWorldPos(const cv::Mat &Pos);
     cv::Mat GetWorldPos();
 
     cv::Mat GetNormal();
-    KeyFrame* GetReferenceKeyFrame();
+    SparseKeyFrame* GetReferenceKeyFrame();
 
-    std::map<KeyFrame*,size_t> GetObservations();
+    std::map<SparseKeyFrame*,size_t> GetObservations();
     int Observations();
 
-    void AddObservation(KeyFrame* pKF,size_t idx);
-    void EraseObservation(KeyFrame* pKF);
+    void AddObservation(SparseKeyFrame* pKF,size_t idx);
+    void EraseObservation(SparseKeyFrame* pKF);
 
-    int GetIndexInKeyFrame(KeyFrame* pKF);
-    bool IsInKeyFrame(KeyFrame* pKF);
+    int GetIndexInKeyFrame(SparseKeyFrame* pKF);
+    bool IsInKeyFrame(SparseKeyFrame* pKF);
 
     void SetBadFlag();
     bool isBad();
@@ -78,7 +78,7 @@ public:
 
     float GetMinDistanceInvariance();
     float GetMaxDistanceInvariance();
-    int PredictScale(const float &currentDist, KeyFrame*pKF);
+    int PredictScale(const float &currentDist, SparseKeyFrame*pKF);
     int PredictScale(const float &currentDist, Frame* pF);
 
 public:
@@ -118,7 +118,7 @@ protected:
      cv::Mat mWorldPos;
 
      // Keyframes observing the point and associated index in keyframe
-     std::map<KeyFrame*,size_t> mObservations;
+     std::map<SparseKeyFrame*,size_t> mObservations;
 
      // Mean viewing direction
      cv::Mat mNormalVector;
@@ -127,7 +127,7 @@ protected:
      cv::Mat mDescriptor;
 
      // Reference KeyFrame
-     KeyFrame* mpRefKF;
+     SparseKeyFrame* mpRefKF;
 
      // Tracking counters
      int mnVisible;

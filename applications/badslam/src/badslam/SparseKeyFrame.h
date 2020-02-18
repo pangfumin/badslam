@@ -40,10 +40,10 @@ class MapPoint;
 class Frame;
 class KeyFrameDatabase;
 
-class KeyFrame
+class SparseKeyFrame
 {
 public:
-    KeyFrame(Frame &F, Map* pMap, KeyFrameDatabase* pKFDB, const bool& need_dense_keyframe = false);
+    SparseKeyFrame(Frame &F, Map* pMap, KeyFrameDatabase* pKFDB, const bool& need_dense_keyframe = false);
 
     // Pose functions
     void SetPose(const cv::Mat &Tcw);
@@ -58,27 +58,27 @@ public:
     void ComputeBoW();
 
     // Covisibility graph functions
-    void AddConnection(KeyFrame* pKF, const int &weight);
-    void EraseConnection(KeyFrame* pKF);
+    void AddConnection(SparseKeyFrame* pKF, const int &weight);
+    void EraseConnection(SparseKeyFrame* pKF);
     void UpdateConnections();
     void UpdateBestCovisibles();
-    std::set<KeyFrame *> GetConnectedKeyFrames();
-    std::vector<KeyFrame* > GetVectorCovisibleKeyFrames();
-    std::vector<KeyFrame*> GetBestCovisibilityKeyFrames(const int &N);
-    std::vector<KeyFrame*> GetCovisiblesByWeight(const int &w);
-    int GetWeight(KeyFrame* pKF);
+    std::set<SparseKeyFrame *> GetConnectedKeyFrames();
+    std::vector<SparseKeyFrame* > GetVectorCovisibleKeyFrames();
+    std::vector<SparseKeyFrame*> GetBestCovisibilityKeyFrames(const int &N);
+    std::vector<SparseKeyFrame*> GetCovisiblesByWeight(const int &w);
+    int GetWeight(SparseKeyFrame* pKF);
 
     // Spanning tree functions
-    void AddChild(KeyFrame* pKF);
-    void EraseChild(KeyFrame* pKF);
-    void ChangeParent(KeyFrame* pKF);
-    std::set<KeyFrame*> GetChilds();
-    KeyFrame* GetParent();
-    bool hasChild(KeyFrame* pKF);
+    void AddChild(SparseKeyFrame* pKF);
+    void EraseChild(SparseKeyFrame* pKF);
+    void ChangeParent(SparseKeyFrame* pKF);
+    std::set<SparseKeyFrame*> GetChilds();
+    SparseKeyFrame* GetParent();
+    bool hasChild(SparseKeyFrame* pKF);
 
     // Loop Edges
-    void AddLoopEdge(KeyFrame* pKF);
-    std::set<KeyFrame*> GetLoopEdges();
+    void AddLoopEdge(SparseKeyFrame* pKF);
+    std::set<SparseKeyFrame*> GetLoopEdges();
 
     // MapPoint observation functions
     void AddMapPoint(MapPoint* pMP, const size_t &idx);
@@ -112,7 +112,7 @@ public:
         return a>b;
     }
 
-    static bool lId(KeyFrame* pKF1, KeyFrame* pKF2){
+    static bool lId(SparseKeyFrame* pKF1, SparseKeyFrame* pKF2){
         return pKF1->mnId<pKF2->mnId;
     }
 
@@ -211,15 +211,15 @@ protected:
     // Grid over the image to speed up feature matching
     std::vector< std::vector <std::vector<size_t> > > mGrid;
 
-    std::map<KeyFrame*,int> mConnectedKeyFrameWeights;
-    std::vector<KeyFrame*> mvpOrderedConnectedKeyFrames;
+    std::map<SparseKeyFrame*,int> mConnectedKeyFrameWeights;
+    std::vector<SparseKeyFrame*> mvpOrderedConnectedKeyFrames;
     std::vector<int> mvOrderedWeights;
 
     // Spanning Tree and Loop Edges
     bool mbFirstConnection;
-    KeyFrame* mpParent;
-    std::set<KeyFrame*> mspChildrens;
-    std::set<KeyFrame*> mspLoopEdges;
+    SparseKeyFrame* mpParent;
+    std::set<SparseKeyFrame*> mspChildrens;
+    std::set<SparseKeyFrame*> mspLoopEdges;
 
     // Bad flags
     bool mbNotErase;
@@ -240,4 +240,4 @@ protected:
 
 } //namespace ORB_SLAM
 
-#endif // KEYFRAME_H
+#endif // SparseKeyFrame_H

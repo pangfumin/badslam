@@ -25,7 +25,7 @@
 #include <opencv2/opencv.hpp>
 #include <vector>
 
-#include "KeyFrame.h"
+#include "SparseKeyFrame.h"
 
 
 
@@ -36,7 +36,7 @@ class Sim3Solver
 {
 public:
 
-    Sim3Solver(KeyFrame* pKF1, KeyFrame* pKF2, const std::vector<MapPoint*> &vpMatched12, const bool bFixScale = true);
+    Sim3Solver(SparseKeyFrame* pKF1, SparseKeyFrame* pKF2, const std::vector<MapPoint*> &vpMatched12, const bool bFixScale = true);
 
     void SetRansacParameters(double probability = 0.99, int minInliers = 6 , int maxIterations = 300);
 
@@ -64,8 +64,8 @@ protected:
 protected:
 
     // KeyFrames and matches
-    KeyFrame* mpKF1;
-    KeyFrame* mpKF2;
+    SparseKeyFrame* mpKF1;
+    SparseKeyFrame* mpKF2;
 
     std::vector<cv::Mat> mvX3Dc1;
     std::vector<cv::Mat> mvX3Dc2;

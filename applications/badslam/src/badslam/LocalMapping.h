@@ -21,7 +21,7 @@
 #ifndef LOCALMAPPING_H
 #define LOCALMAPPING_H
 
-#include "KeyFrame.h"
+#include "SparseKeyFrame.h"
 #include "Map.h"
 #include "LoopClosing.h"
 #include "Tracking.h"
@@ -49,7 +49,7 @@ public:
     void Run();
     void RunOneStep();
 
-    void InsertKeyFrame(KeyFrame* pKF);
+    void InsertKeyFrame(SparseKeyFrame* pKF);
 
     // Thread Synch
     void RequestStop();
@@ -83,7 +83,7 @@ protected:
 
     void KeyFrameCulling();
 
-    cv::Mat ComputeF12(KeyFrame* &pKF1, KeyFrame* &pKF2);
+    cv::Mat ComputeF12(SparseKeyFrame* &pKF1, SparseKeyFrame* &pKF2);
 
     cv::Mat SkewSymmetricMatrix(const cv::Mat &v);
 
@@ -104,9 +104,9 @@ protected:
     LoopClosing* mpLoopCloser;
     Tracking* mpTracker;
 
-    std::list<KeyFrame*> mlNewKeyFrames;
+    std::list<SparseKeyFrame*> mlNewKeyFrames;
 
-    KeyFrame* mpCurrentKeyFrame;
+    SparseKeyFrame* mpCurrentKeyFrame;
 
     std::list<MapPoint*> mlpRecentAddedMapPoints;
 

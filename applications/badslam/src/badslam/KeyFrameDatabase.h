@@ -25,7 +25,7 @@
 #include <list>
 #include <set>
 
-#include "KeyFrame.h"
+#include "SparseKeyFrame.h"
 #include "Frame.h"
 #include "ORBVocabulary.h"
 
@@ -35,7 +35,7 @@
 namespace vis
 {
 
-class KeyFrame;
+class SparseKeyFrame;
 class Frame;
 
 
@@ -45,17 +45,17 @@ public:
 
     KeyFrameDatabase(const ORBVocabulary &voc);
 
-   void add(KeyFrame* pKF);
+   void add(SparseKeyFrame* pKF);
 
-   void erase(KeyFrame* pKF);
+   void erase(SparseKeyFrame* pKF);
 
    void clear();
 
    // Loop Detection
-   std::vector<KeyFrame *> DetectLoopCandidates(KeyFrame* pKF, float minScore);
+   std::vector<SparseKeyFrame *> DetectLoopCandidates(SparseKeyFrame* pKF, float minScore);
 
    // Relocalization
-   std::vector<KeyFrame*> DetectRelocalizationCandidates(Frame* F);
+   std::vector<SparseKeyFrame*> DetectRelocalizationCandidates(Frame* F);
 
 protected:
 
@@ -63,7 +63,7 @@ protected:
   const ORBVocabulary* mpVoc;
 
   // Inverted file
-  std::vector<list<KeyFrame*> > mvInvertedFile;
+  std::vector<list<SparseKeyFrame*> > mvInvertedFile;
 
   // Mutex
   std::mutex mMutex;

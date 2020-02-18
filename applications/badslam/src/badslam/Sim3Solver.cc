@@ -25,7 +25,7 @@
 #include <cmath>
 #include <opencv2/core/core.hpp>
 
-#include "KeyFrame.h"
+#include "SparseKeyFrame.h"
 #include "ORBmatcher.h"
 
 #include "DUtils/Random.h"
@@ -34,7 +34,7 @@ namespace vis
 {
 
 
-Sim3Solver::Sim3Solver(KeyFrame *pKF1, KeyFrame *pKF2, const vector<MapPoint *> &vpMatched12, const bool bFixScale):
+Sim3Solver::Sim3Solver(SparseKeyFrame *pKF1, SparseKeyFrame *pKF2, const vector<MapPoint *> &vpMatched12, const bool bFixScale):
     mnIterations(0), mnBestInliers(0), mbFixScale(bFixScale)
 {
     mpKF1 = pKF1;

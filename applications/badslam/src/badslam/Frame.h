@@ -27,7 +27,7 @@
 #include "DBoW2/BowVector.h"
 #include "DBoW2/FeatureVector.h"
 #include "ORBVocabulary.h"
-#include "KeyFrame.h"
+#include "SparseKeyFrame.h"
 #include "ORBextractor.h"
 
 #include <opencv2/opencv.hpp>
@@ -38,7 +38,7 @@ namespace vis
 #define FRAME_GRID_COLS 64
 
 class MapPoint;
-class KeyFrame;
+class SparseKeyFrame;
 
 class Frame
 {
@@ -164,7 +164,7 @@ public:
     long unsigned int mnId;
 
     // Reference Keyframe.
-    KeyFrame* mpReferenceKF;
+    SparseKeyFrame* mpReferenceKF;
 
     // Scale pyramid info.
     int mnScaleLevels;

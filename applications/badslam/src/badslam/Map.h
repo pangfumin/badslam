@@ -22,7 +22,7 @@
 #define MAP_H
 
 #include "MapPoint.h"
-#include "KeyFrame.h"
+#include "SparseKeyFrame.h"
 #include <set>
 
 #include <mutex>
@@ -33,22 +33,22 @@ namespace vis
 {
 
 class MapPoint;
-class KeyFrame;
+class SparseKeyFrame;
 
 class Map
 {
 public:
     Map();
 
-    void AddKeyFrame(KeyFrame* pKF);
+    void AddKeyFrame(SparseKeyFrame* pKF);
     void AddMapPoint(MapPoint* pMP);
     void EraseMapPoint(MapPoint* pMP);
-    void EraseKeyFrame(KeyFrame* pKF);
+    void EraseKeyFrame(SparseKeyFrame* pKF);
     void SetReferenceMapPoints(const std::vector<MapPoint*> &vpMPs);
     void InformNewBigChange();
     int GetLastBigChangeIdx();
 
-    std::vector<KeyFrame*> GetAllKeyFrames();
+    std::vector<SparseKeyFrame*> GetAllKeyFrames();
     std::vector<MapPoint*> GetAllMapPoints();
     std::vector<MapPoint*> GetReferenceMapPoints();
 
@@ -59,7 +59,7 @@ public:
 
     void clear();
 
-    vector<KeyFrame*> mvpKeyFrameOrigins;
+    vector<SparseKeyFrame*> mvpKeyFrameOrigins;
 
     std::mutex mMutexMapUpdate;
 
@@ -68,7 +68,7 @@ public:
 
 protected:
     std::set<MapPoint*> mspMapPoints;
-    std::set<KeyFrame*> mspKeyFrames;
+    std::set<SparseKeyFrame*> mspKeyFrames;
 
     std::vector<MapPoint*> mvpReferenceMapPoints;
 
