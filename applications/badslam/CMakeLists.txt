@@ -12,7 +12,7 @@ if (CMAKE_CUDA_COMPILER)
   endif()
 
   add_subdirectory(third_party/DBoW2)
-  add_subdirectory(third_party/g2o)
+#  add_subdirectory(third_party/g2o)
   
   find_package(opengv REQUIRED)
   
@@ -94,13 +94,16 @@ if (CMAKE_CUDA_COMPILER)
     target_compile_definitions(badslam_baselib PUBLIC NOMINMAX) # to get rid of max define
   endif()
 
+
+
   target_link_libraries(badslam_baselib
     PRIVATE
       opengv
       ${SuiteSparse_LIBRARIES}
       ${OpenCV_LIBS}
       DBoW2
-      g2o
+          "${CMAKE_CURRENT_SOURCE_DIR}/third_party/g2o/lib/libg2o.so"
+
       ${realsense2_LIBRARY}
       ${OPENGL_LIBRARY}
       ${GLEW_LIBRARIES}
@@ -127,6 +130,7 @@ if (CMAKE_CUDA_COMPILER)
     third_party
     third_party/cub-1.8.0
     third_party/DBoW2
+    third_party/g2o
     ${realsense_INCLUDE_DIR}
     ${GLEW_INCLUDE_DIR}
   )
