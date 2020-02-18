@@ -27,6 +27,15 @@ include(CheckLanguage)
 #       Common settings are either the 'native' arch for which the binary will
 #       be known to run on exclusively, or a broader set of PTX architectures
 #       in case the binary is intended for distribution.
+
+
+# For Clion:
+# 1. For CMAKE_CUDA_COMPILER NOT_FOUND Error:
+# https://youtrack.jetbrains.com/issue/CPP-17175?_ga=2.224999839.46557879.1581840206-368603516.1581840206
+# 2. For "RUN" /cmake_device_link.o Error
+# https://youtrack.jetbrains.com/issue/CPP-10292
+
+
 check_language(CUDA)
 if (CMAKE_CUDA_COMPILER)
   enable_language(CUDA)

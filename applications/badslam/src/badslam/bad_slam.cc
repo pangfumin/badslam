@@ -73,7 +73,7 @@ BadSlam::BadSlam(
 
 
 
-    const string strVocFile = "/home/pang/disk/software/ORB_SLAM2/Vocabulary/ORBvoc.txt";
+    const string strVocFile = "/home/pang/disk/software/ORB_SLAM2/Vocabulary/ORBvoc.bin";
     const string strSettingsFile = "/home/pang/disk/software/ORB_SLAM2/Examples/RGB-D/TUM1.yaml";
     orbslam_system_ = std::make_shared<vis::System>(strVocFile, strSettingsFile, 
                   vis::System::eSensor::RGBD, this,false);
