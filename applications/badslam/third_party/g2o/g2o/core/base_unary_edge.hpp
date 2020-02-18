@@ -87,6 +87,11 @@ void BaseUnaryEdge<D, E, VertexXiType>::linearizeOplus()
   if (vi->fixed())
     return;
 
+    if (_callbackFunction) {
+        _jacobianOplusXi = _jacobian_cache;
+        return;
+    }
+
 #ifdef G2O_OPENMP
   vi->lockQuadraticForm();
 #endif
@@ -120,6 +125,12 @@ void BaseUnaryEdge<D, E, VertexXiType>::linearizeOplus()
 #ifdef G2O_OPENMP
   vi->unlockQuadraticForm();
 #endif
+}
+
+template <int D, typename E, typename VertexXiType>
+void BaseUnaryEdge<D, E, VertexXiType>::setResidualJacobianCallback
+        (const ResidualJacobainCallbackFunction& callbackFunction) {
+    _callbackFunction = callbackFunction;
 }
 
 template <int D, typename E, typename VertexXiType>

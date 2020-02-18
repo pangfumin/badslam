@@ -46,9 +46,14 @@ namespace g2o {
       static const int Dimension = BaseEdge<D, E>::Dimension;
       typedef typename BaseEdge<D,E>::Measurement Measurement;
       typedef VertexXi VertexXiType;
+      typedef Matrix<double, D, VertexXiType::Dimension> JacobianType;
       typedef typename Matrix<double, D, VertexXiType::Dimension>::AlignedMapType JacobianXiOplusType;
       typedef typename BaseEdge<D,E>::ErrorVector ErrorVector;
       typedef typename BaseEdge<D,E>::InformationType InformationType;
+      typedef std::function<
+              std::pair<ErrorVector, JacobianType>(
+                      const VertexXiType&,
+                      const Measurement& meas)> ResidualJacobainCallbackFunction;
 
       BaseUnaryEdge() : BaseEdge<D,E>(),
         _jacobianOplusXi(0, D, VertexXiType::Dimension)
@@ -67,6 +72,28 @@ namespace g2o {
        * the result in temporary variables _jacobianOplusXi and _jacobianOplusXj
        */
       virtual void linearizeOplus();
+
+      /** setResidualJacobianCallback usage
+          void computeError()
+          {
+
+              if (_callbackFunction) {
+                  // todo: calculate error and jacobain from callback, and return
+                  // std::cout << "_callbackFunction called ..." << std::endl;
+                  const VertexParams* vi = static_cast<const VertexParams*>(vertex(0));
+                  std::pair<ErrorVector, JacobianType> result =
+                          _callbackFunction(*vi, _measurement);
+                  // std::cout << "error 1: " << result.first.transpose() << std::endl;
+                  // std::cout << "jacobain 1: " << result.second << std::endl;
+                  _error = result.first;
+                  _jacobian_cache = result.second;
+
+              }
+
+          }
+       **/
+
+      virtual void setResidualJacobianCallback(const ResidualJacobainCallbackFunction& callbackFunction);
 
       //! returns the result of the linearization in the manifold space for the node xi
       const JacobianXiOplusType& jacobianOplusXi() const { return _jacobianOplusXi;}
@@ -87,7 +114,9 @@ namespace g2o {
       using BaseEdge<D,E>::_vertices;
       using BaseEdge<D,E>::_dimension;
 
+      JacobianType _jacobian_cache;
       JacobianXiOplusType _jacobianOplusXi;
+      ResidualJacobainCallbackFunction _callbackFunction;
 
     public:
       EIGEN_MAKE_ALIGNED_OPERATOR_NEW
