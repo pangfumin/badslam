@@ -1831,7 +1831,6 @@ void MainWindow::WorkerThreadMain() {
       // Preprocess the frame such that its point cloud visualization will be available
       (orbslam_system_)->PreprocessFrame(frame_index_, &(orbslam_system_)->final_depth_buffer(), nullptr);
     } else {
-      (orbslam_system_)->ProcessFrame(frame_index_, create_kf_);
 
         /// orbslam <
 
@@ -1848,7 +1847,7 @@ void MainWindow::WorkerThreadMain() {
         // cv::imshow("image" , imD);
         // cv::waitKey(2);
 
-        orbslam_system_->TrackRGBD(imRGB,imD,frame_index_, false);
+        orbslam_system_->TrackRGBD(imRGB,imD, frame_index_, frame_index_, create_kf_);
         bool need_orb_keyframe =  orbslam_system_->IsKeyframeNeeded();
         cv::Mat Tcw = orbslam_system_->GetTracker()->mCurrentFrame.GetTcw();
 

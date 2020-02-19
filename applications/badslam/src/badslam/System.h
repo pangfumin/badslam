@@ -104,7 +104,7 @@ public:
     // Input image: RGB (CV_8UC3) or grayscale (CV_8U). RGB is converted to grayscale.
     // Input depthmap: Float (CV_32F).
     // Returns the camera pose (empty if tracking fails).
-    cv::Mat TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const double &timestamp, const bool& force_keyframe);
+    cv::Mat TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const int& index,  const double &timestamp, const bool& force_keyframe);
 
     bool IsKeyframeNeeded();
     // This stops local mapping thread (map building) and performs only camera tracking.
@@ -203,11 +203,6 @@ private:
     // badslam
 
 public:
-
-
-
-    // Processes a new RGB-D frame.
-    void ProcessFrame(int frame_index, bool force_keyframe = false);
 
     // Updates the 3D visualization.
     void UpdateOdometryVisualization(int frame_index,

@@ -251,7 +251,8 @@ System::System(const BadSlamConfig& config,
 }
 
 
-cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const double &timestamp, const bool& force_keyframe)
+cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const int& index,
+        const double &timestamp, const bool& force_keyframe)
 {
     if(mSensor!=RGBD)
     {
@@ -299,6 +300,127 @@ cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const doub
     mTrackingState = mpTracker->mState;
     mTrackedMapPoints = mpTracker->mCurrentFrame.mvpMapPoints;
     mTrackedKeyPointsUn = mpTracker->mCurrentFrame.mvKeysUn;
+
+    // Get the images. This should be before starting the "without I/O" timer
+    // since it can lead to the images being loaded from disk (in case they are
+    // not cached yet).
+    const Image<Vec3u8>* rgb_image =
+            rgbd_video_->color_frame_mutable(index)->GetImage().get();
+    const shared_ptr<Image<u16>>& depth_image =
+            rgbd_video_->depth_frame_mutable(index)->GetImage();
+
+    vis::Time color_ts = rgbd_video_->color_ts_mutable(index);
+    vis::Time depth_ts = rgbd_video_->depth_ts_mutable(index);
+    // std::cout << "ts: " << color_ts.toNSec() << " " << depth_ts.toNSec() << std::endl;
+
+
+    // // After I/O is done, start the "no I/O" frame timer.
+    frame_timer_.Start();
+
+    // Update target frame end time for real-time simulation.
+    target_frame_end_time_ += 1. / config_.target_frame_rate;
+
+    // Pre-process the RGB-D frame.
+    shared_ptr<Image<u16>> final_cpu_depth_map;
+    PreprocessFrame(index, &final_depth_buffer_, &final_cpu_depth_map);
+
+    // Estimate the frame's pose (unless it is the first frame).
+    pose_estimated_ = false;
+    if (config_.estimate_poses && base_kf_) {
+        RunOdometry(index);
+        pose_estimated_ = true;
+    }
+
+    // Use a very basic keyframe selection strategy: regularly select one
+    // keyframe every keyframe_interval frames.
+    bool create_keyframe =
+            force_keyframe ||
+            ((index - config_.start_frame) % config_.keyframe_interval == 0);
+
+
+    if (create_keyframe) {
+        CreateKeyframe(index,
+                       rgb_image,
+                       final_cpu_depth_map,
+                       *final_depth_buffer_);
+    }
+
+    keyframe_created_ = create_keyframe;
+
+    // Perform bundle adjustment until convergence / reaching the maximum (planned) iteration count in offline mode,
+    // or additionally only until the time for the current frame ran out in real-time mode.
+    if (num_planned_ba_iterations_ > 0) {
+        // Is there time to do at least one iteration?
+        bool start_ba = true;
+        if (!config_.parallel_ba && config_.target_frame_rate > 0) {
+            double elapsed_frame_time = frame_timer_.GetTimeSinceStart();
+            start_ba = actual_frame_start_time_ + elapsed_frame_time < target_frame_end_time_;
+        }
+
+        if (start_ba) {
+            static int bundle_adjustment_counter = 0;
+            ++ bundle_adjustment_counter;
+
+            direct_ba_->Lock();
+            usize keyframes_size = direct_ba_->keyframes().size() + queued_keyframes_.size();
+            direct_ba_->Unlock();
+
+            // Decide whether to optimize intrinsics.
+            // TODO: This contains some heuristics which are not configurable by parameters!
+            // The idea for these heuristics is that at the beginning, intrinsics optimization
+            // is cheap (since there are few keyframes) and necessary (since the initial
+            // intrinsics might be somewhat off). So we do it more often at the start.
+            // However, we should not do it too early since there might not be enough
+            // data yet and the self-calibration might pick up lots of noise instead
+            // of converging to a good calibration.
+            bool optimize_depth_intrinsics =
+                    config_.optimize_intrinsics &&
+                    (keyframes_size >= 10 &&
+                     (keyframes_size <= 20 ||
+                      (bundle_adjustment_counter % config_.intrinsics_optimization_interval == 0)));
+            bool optimize_color_intrinsics = optimize_depth_intrinsics;
+
+            if (config_.parallel_ba) {
+                // Signal to the BA thread to start BA iterations
+                StartParallelIterations(
+                        num_planned_ba_iterations_,
+                        optimize_depth_intrinsics,
+                        optimize_color_intrinsics,
+                        config_.do_surfel_updates,
+                        /*optimize_poses*/ true,
+                        /*optimize_geometry*/ true);
+                num_planned_ba_iterations_ = 0;
+            } else {
+                int iterations_done = 0;
+                bool converged = false;
+                RunBundleAdjustment(index,
+                                    optimize_depth_intrinsics && config_.use_geometric_residuals,
+                                    optimize_color_intrinsics && config_.use_photometric_residuals,
+                        /*optimize_poses*/ true,
+                        /*optimize_geometry*/ true,
+                        /*min_iterations*/ 0,  // loop_closed ? 2 : 0
+                                    num_planned_ba_iterations_,
+                        /*active_keyframe_window_start*/ config_.disable_deactivation ? 0 : -1,
+                        /*active_keyframe_window_end*/ config_.disable_deactivation ? (direct_ba_->keyframes().size() - 1) : -1,
+                        /*increase_ba_iteration_count*/ (config_.target_frame_rate == 0),
+                                    &iterations_done,
+                                    &converged,
+                                    target_frame_end_time_ - actual_frame_start_time_,
+                                    (config_.target_frame_rate > 0) ? &frame_timer_ : nullptr);
+                if (converged) {
+                    num_planned_ba_iterations_ = 0;
+                } else {
+                    num_planned_ba_iterations_ = std::max<int>(0, num_planned_ba_iterations_ - iterations_done);
+                }
+
+
+            }
+        }
+    }
+
+
+
+
     return Tcw;
 }
 
@@ -495,128 +617,6 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
 }
 
 
-    void System::ProcessFrame(int frame_index, bool force_keyframe) {
-        // Get the images. This should be before starting the "without I/O" timer
-        // since it can lead to the images being loaded from disk (in case they are
-        // not cached yet).
-        const Image<Vec3u8>* rgb_image =
-                rgbd_video_->color_frame_mutable(frame_index)->GetImage().get();
-        const shared_ptr<Image<u16>>& depth_image =
-                rgbd_video_->depth_frame_mutable(frame_index)->GetImage();
-
-        vis::Time color_ts = rgbd_video_->color_ts_mutable(frame_index);
-        vis::Time depth_ts = rgbd_video_->depth_ts_mutable(frame_index);
-        // std::cout << "ts: " << color_ts.toNSec() << " " << depth_ts.toNSec() << std::endl;
-
-
-        // // After I/O is done, start the "no I/O" frame timer.
-        frame_timer_.Start();
-
-        // Update target frame end time for real-time simulation.
-        target_frame_end_time_ += 1. / config_.target_frame_rate;
-
-        // Pre-process the RGB-D frame.
-        shared_ptr<Image<u16>> final_cpu_depth_map;
-        PreprocessFrame(frame_index, &final_depth_buffer_, &final_cpu_depth_map);
-
-        // Estimate the frame's pose (unless it is the first frame).
-        pose_estimated_ = false;
-        if (config_.estimate_poses && base_kf_) {
-            RunOdometry(frame_index);
-            pose_estimated_ = true;
-        }
-
-        // Use a very basic keyframe selection strategy: regularly select one
-        // keyframe every keyframe_interval frames.
-        bool create_keyframe =
-                force_keyframe ||
-                ((frame_index - config_.start_frame) % config_.keyframe_interval == 0);
-
-
-        if (create_keyframe) {
-            CreateKeyframe(frame_index,
-                           rgb_image,
-                           final_cpu_depth_map,
-                           *final_depth_buffer_);
-        }
-
-        keyframe_created_ = create_keyframe;
-
-        // Perform bundle adjustment until convergence / reaching the maximum (planned) iteration count in offline mode,
-        // or additionally only until the time for the current frame ran out in real-time mode.
-        if (num_planned_ba_iterations_ > 0) {
-            // Is there time to do at least one iteration?
-            bool start_ba = true;
-            if (!config_.parallel_ba && config_.target_frame_rate > 0) {
-                double elapsed_frame_time = frame_timer_.GetTimeSinceStart();
-                start_ba = actual_frame_start_time_ + elapsed_frame_time < target_frame_end_time_;
-            }
-
-            if (start_ba) {
-                static int bundle_adjustment_counter = 0;
-                ++ bundle_adjustment_counter;
-
-                direct_ba_->Lock();
-                usize keyframes_size = direct_ba_->keyframes().size() + queued_keyframes_.size();
-                direct_ba_->Unlock();
-
-                // Decide whether to optimize intrinsics.
-                // TODO: This contains some heuristics which are not configurable by parameters!
-                // The idea for these heuristics is that at the beginning, intrinsics optimization
-                // is cheap (since there are few keyframes) and necessary (since the initial
-                // intrinsics might be somewhat off). So we do it more often at the start.
-                // However, we should not do it too early since there might not be enough
-                // data yet and the self-calibration might pick up lots of noise instead
-                // of converging to a good calibration.
-                bool optimize_depth_intrinsics =
-                        config_.optimize_intrinsics &&
-                        (keyframes_size >= 10 &&
-                         (keyframes_size <= 20 ||
-                          (bundle_adjustment_counter % config_.intrinsics_optimization_interval == 0)));
-                bool optimize_color_intrinsics = optimize_depth_intrinsics;
-
-                if (config_.parallel_ba) {
-                    // Signal to the BA thread to start BA iterations
-                    StartParallelIterations(
-                            num_planned_ba_iterations_,
-                            optimize_depth_intrinsics,
-                            optimize_color_intrinsics,
-                            config_.do_surfel_updates,
-                            /*optimize_poses*/ true,
-                            /*optimize_geometry*/ true);
-                    num_planned_ba_iterations_ = 0;
-                } else {
-                    int iterations_done = 0;
-                    bool converged = false;
-                    RunBundleAdjustment(frame_index,
-                                        optimize_depth_intrinsics && config_.use_geometric_residuals,
-                                        optimize_color_intrinsics && config_.use_photometric_residuals,
-                            /*optimize_poses*/ true,
-                            /*optimize_geometry*/ true,
-                            /*min_iterations*/ 0,  // loop_closed ? 2 : 0
-                                        num_planned_ba_iterations_,
-                            /*active_keyframe_window_start*/ config_.disable_deactivation ? 0 : -1,
-                            /*active_keyframe_window_end*/ config_.disable_deactivation ? (direct_ba_->keyframes().size() - 1) : -1,
-                            /*increase_ba_iteration_count*/ (config_.target_frame_rate == 0),
-                                        &iterations_done,
-                                        &converged,
-                                        target_frame_end_time_ - actual_frame_start_time_,
-                                        (config_.target_frame_rate > 0) ? &frame_timer_ : nullptr);
-                    if (converged) {
-                        num_planned_ba_iterations_ = 0;
-                    } else {
-                        num_planned_ba_iterations_ = std::max<int>(0, num_planned_ba_iterations_ - iterations_done);
-                    }
-
-
-                }
-            }
-        }
-
-
-
-
-    }
 
 
     void System::UpdateOdometryVisualization(
@@ -1157,11 +1157,11 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
         constexpr bool use_gradmag = false;
 
         // Predict the frame's pose using (a) motion model(s).
-        SE3f base_kf_tr_frame_initial_estimate;
-        SE3f base_kf_tr_frame_initial_estimate_2;
-        PredictFramePose(
-                &base_kf_tr_frame_initial_estimate,
-                &base_kf_tr_frame_initial_estimate_2);
+//        SE3f base_kf_tr_frame_initial_estimate;
+//        SE3f base_kf_tr_frame_initial_estimate_2;
+//        PredictFramePose(
+//                &base_kf_tr_frame_initial_estimate,
+//                &base_kf_tr_frame_initial_estimate_2);
 
         // Convert the raw u16 depths of the current frame to calibrated float
         // depths and transform the color image to depth intrinsics (and image size)
@@ -1232,36 +1232,43 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
         direct_ba_->Unlock();
 
         SE3f base_T_frame_estimate;
-        TrackFramePairwise(
-                &pairwise_tracking_buffers_,
-                stream_,
-                color_camera,
-                depth_camera,
-                depth_params,
-                *direct_ba_->cfactor_buffer(),
-                &pose_estimation_helper_buffers_,
-                render_window_,
-                /*kGatherConvergenceSamples ? &convergence_samples_file_ :*/ nullptr,
-                direct_ba_->use_depth_residuals(),
-                direct_ba_->use_descriptor_residuals(),
-                /*use_pyramid_level_0*/ true,
-                use_gradmag,
-                /* tracked frame */
-                *depth_buffer_,
-                *normals_buffer_,
-                tracked_gradmag_texture_,
-                /* base frame */
-                *calibrated_depth_,
-                base_kf_->normals_buffer(),
-                *calibrated_gradmag_,
-                calibrated_gradmag_texture_,
-                /* input / output poses */
-                base_kf_global_T_frame,
-                /*test_different_initial_estimates*/ true,
-                base_kf_tr_frame_initial_estimate,
-                base_kf_tr_frame_initial_estimate_2,
-                &base_T_frame_estimate);
+//        TrackFramePairwise(
+//                &pairwise_tracking_buffers_,
+//                stream_,
+//                color_camera,
+//                depth_camera,
+//                depth_params,
+//                *direct_ba_->cfactor_buffer(),
+//                &pose_estimation_helper_buffers_,
+//                render_window_,
+//                /*kGatherConvergenceSamples ? &convergence_samples_file_ :*/ nullptr,
+//                direct_ba_->use_depth_residuals(),
+//                direct_ba_->use_descriptor_residuals(),
+//                /*use_pyramid_level_0*/ true,
+//                use_gradmag,
+//                /* tracked frame */
+//                *depth_buffer_,
+//                *normals_buffer_,
+//                tracked_gradmag_texture_,
+//                /* base frame */
+//                *calibrated_depth_,
+//                base_kf_->normals_buffer(),
+//                *calibrated_gradmag_,
+//                calibrated_gradmag_texture_,
+//                /* input / output poses */
+//                base_kf_global_T_frame,
+//                /*test_different_initial_estimates*/ true,
+//                base_kf_tr_frame_initial_estimate,
+//                base_kf_tr_frame_initial_estimate_2,
+//                &base_T_frame_estimate);
 
+
+        SE3f base_T_WC = rgbd_video_->groundtruth_pose_frame(base_kf_->frame_index());
+        SE3f frame_T_WC = rgbd_video_->groundtruth_pose_frame(frame_index);
+        SE3f gt_T_CbCf = base_T_WC.inverse() * frame_T_WC;
+        std::cout << "gt_T_CbCf \n" << gt_T_CbCf.matrix() << std::endl;
+        std::cout << "base_T_frame_estimate \n" << base_T_frame_estimate.matrix() << std::endl;
+        base_T_frame_estimate = gt_T_CbCf;
         direct_ba_->Lock();
         SE3f new_global_T_frame = base_kf_global_T_frame_ * base_T_frame_estimate;
         rgbd_video_->depth_frame_mutable(frame_index)->SetGlobalTFrame(new_global_T_frame);
