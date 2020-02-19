@@ -111,6 +111,7 @@ public:
 
     void Reset();
     cv::Mat feature_image_;
+    bool new_keyframe_;
 protected:
 
     // Main tracking function. It is independent of the input sensor.
@@ -160,6 +161,8 @@ protected:
 
     //Local Map
     SparseKeyFrame* mpReferenceKF;
+    SparseKeyFrame* mpDenseReferenceKF;
+
     std::vector<SparseKeyFrame*> mvpLocalKeyFrames;
     std::vector<MapPoint*> mvpLocalMapPoints;
     

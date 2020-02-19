@@ -134,7 +134,7 @@ void LocalMapping::RunOneStep() {
             Optimizer::LocalBundleAdjustment(mpCurrentKeyFrame,&mbAbortBA, mpMap);
 
         // Check redundant local Keyframes
-        KeyFrameCulling();
+//        KeyFrameCulling();
     }
 
     mpLoopCloser->InsertKeyFrame(mpCurrentKeyFrame);

@@ -50,7 +50,7 @@ Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer,
     Map *pMap, KeyFrameDatabase* pKFDB, const string &strSettingPath, const int sensor):
     mState(NO_IMAGES_YET), mSensor(sensor), mbOnlyTracking(false), mbVO(false), mpORBVocabulary(pVoc),
     mpKeyFrameDB(pKFDB), mpInitializer(static_cast<Initializer*>(NULL)), mpSystem(pSys),
-    mpFrameDrawer(pFrameDrawer),  mpMap(pMap), mnLastRelocFrameId(0)
+    mpFrameDrawer(pFrameDrawer),  mpMap(pMap), mnLastRelocFrameId(0), new_keyframe_(false)
 {
     // Load camera parameters from settings file
 
@@ -203,20 +203,47 @@ cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB,const cv::Mat &imD, const d
 void Tracking::Track(const bool& force_keyframe)
 {
 
+
+    int index = mCurrentFrame.mnId;
+    const Image<Vec3u8>* rgb_image =
+            mpSystem->rgbd_video_->color_frame_mutable(index)->GetImage().get();
+    const shared_ptr<Image<u16>>& depth_image =
+            mpSystem->rgbd_video_->depth_frame_mutable(index)->GetImage();
+
+    vis::Time color_ts = mpSystem->rgbd_video_->color_ts_mutable(index);
+    vis::Time depth_ts = mpSystem->rgbd_video_->depth_ts_mutable(index);
+    // std::cout << "ts: " << color_ts.toNSec() << " " << depth_ts.toNSec() << std::endl;
+
+
+    // // After I/O is done, start the "no I/O" frame timer.
+    mpSystem->frame_timer_.Start();
+
+    // Update target frame end time for real-time simulation.
+    mpSystem->target_frame_end_time_ += 1. / mpSystem->config_.target_frame_rate;
+
+    // Pre-process the RGB-D frame.
+    shared_ptr<Image<u16>> final_cpu_depth_map;
+    mpSystem->PreprocessFrame(index, &(mpSystem->final_depth_buffer_), &final_cpu_depth_map);
+
+
     if(mState==NO_IMAGES_YET)
     {
         mState = NOT_INITIALIZED;
     }
 
     mLastProcessedState=mState;
+    new_keyframe_ = false;
 
     // Get Map Mutex -> Map cannot be changed
     unique_lock<mutex> lock(mpMap->mMutexMapUpdate);
 
     if(mState==NOT_INITIALIZED)
     {
-        if(mSensor==System::STEREO || mSensor==System::RGBD)
+        if(mSensor==System::STEREO || mSensor==System::RGBD) {
             StereoInitialization();
+            new_keyframe_ = true;
+        }
+
         else {
         }
            
@@ -225,6 +252,15 @@ void Tracking::Track(const bool& force_keyframe)
 
         if(mState!=OK)
             return;
+
+
+        std::cout << "orb slam init!  create first dense keyframe " << mCurrentFrame.mnId << std::endl;
+
+        mpSystem->CreateKeyframe(index,
+                       rgb_image,
+                       final_cpu_depth_map,
+                       *(mpSystem->final_depth_buffer_));
+
     }
     else
     {
@@ -400,13 +436,27 @@ void Tracking::Track(const bool& force_keyframe)
             }
             mlpTemporalPoints.clear();
 
+
+            mpSystem->pose_estimated_ = false;
+                if (mpSystem->config_.estimate_poses && mpSystem->base_kf_) {
+                    mpSystem->RunOdometry(index);
+                    mpSystem->pose_estimated_ = true;
+                }
+
+
+
+
+
             // Check if we need to insert a new keyframe
             if(force_keyframe || NeedNewKeyFrame()) {
                  CreateNewKeyFrame();
-                 if (force_keyframe) {
-                     // todo: add dense keyframe
+                 new_keyframe_ = true;
 
-                 }
+                mpSystem->CreateKeyframe(index,
+                               rgb_image,
+                               final_cpu_depth_map,
+                               *(mpSystem->final_depth_buffer_));
+
             }
                
 

@@ -295,60 +295,35 @@ cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const int&
         }
     }
 
-    // Use a very basic keyframe selection strategy: regularly select one
-    // keyframe every keyframe_interval frames.
-    bool create_keyframe =
-            force_keyframe ||
-            ((index - config_.start_frame) % config_.keyframe_interval == 0);
 
 
-    cv::Mat Tcw = mpTracker->GrabImageRGBD(im,depthmap,timestamp, create_keyframe);
+    cv::Mat Tcw = mpTracker->GrabImageRGBD(im,depthmap,timestamp, false /*whatever*/);
+
+
 
     unique_lock<mutex> lock2(mMutexState);
     mTrackingState = mpTracker->mState;
     mTrackedMapPoints = mpTracker->mCurrentFrame.mvpMapPoints;
     mTrackedKeyPointsUn = mpTracker->mCurrentFrame.mvKeysUn;
 
-    // Get the images. This should be before starting the "without I/O" timer
+
+
+
+    bool need_keyframe = mpTracker->new_keyframe_;
+    DoDenseSlam(index, need_keyframe);
+
+    return Tcw;
+}
+
+void System::DoDenseSlam(const int& index, const bool& need_keyframe) {
+// Get the images. This should be before starting the "without I/O" timer
     // since it can lead to the images being loaded from disk (in case they are
     // not cached yet).
-    const Image<Vec3u8>* rgb_image =
-            rgbd_video_->color_frame_mutable(index)->GetImage().get();
-    const shared_ptr<Image<u16>>& depth_image =
-            rgbd_video_->depth_frame_mutable(index)->GetImage();
-
-    vis::Time color_ts = rgbd_video_->color_ts_mutable(index);
-    vis::Time depth_ts = rgbd_video_->depth_ts_mutable(index);
-    // std::cout << "ts: " << color_ts.toNSec() << " " << depth_ts.toNSec() << std::endl;
-
-
-    // // After I/O is done, start the "no I/O" frame timer.
-    frame_timer_.Start();
-
-    // Update target frame end time for real-time simulation.
-    target_frame_end_time_ += 1. / config_.target_frame_rate;
-
-    // Pre-process the RGB-D frame.
-    shared_ptr<Image<u16>> final_cpu_depth_map;
-    PreprocessFrame(index, &final_depth_buffer_, &final_cpu_depth_map);
 
     // Estimate the frame's pose (unless it is the first frame).
-    pose_estimated_ = false;
-    if (config_.estimate_poses && base_kf_) {
-        RunOdometry(index);
-        pose_estimated_ = true;
-    }
 
 
-
-    if (create_keyframe) {
-        CreateKeyframe(index,
-                       rgb_image,
-                       final_cpu_depth_map,
-                       *final_depth_buffer_);
-    }
-
-    keyframe_created_ = create_keyframe;
+    keyframe_created_ = need_keyframe;
 
     // Perform bundle adjustment until convergence / reaching the maximum (planned) iteration count in offline mode,
     // or additionally only until the time for the current frame ran out in real-time mode.
@@ -423,8 +398,6 @@ cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const int&
 
 
 
-
-    return Tcw;
 }
 
 
@@ -1207,17 +1180,21 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
         SE3f base_T_WC = rgbd_video_->groundtruth_pose_frame(base_kf_->frame_index());
         SE3f frame_T_WC = rgbd_video_->groundtruth_pose_frame(frame_index);
         SE3f gt_T_CbCf = base_T_WC.inverse() * frame_T_WC;
-//        std::cout << "gt_T_CbCf \n" << gt_T_CbCf.matrix() << std::endl;
+        std::cout << "gt_T_CbCf \n" << gt_T_CbCf.matrix() << std::endl;
 //        std::cout << "base_T_frame_estimate \n" << base_T_frame_estimate.matrix() << std::endl;
+        SE3f T_base_frame = Converter::toSophusSE3(mpTracker->mlRelativeFramePoses.back()).inverse().cast<float>();
+        std::cout << "T_base_frame \n" << T_base_frame.matrix() << std::endl;
+
         base_T_frame_estimate = gt_T_CbCf;
+        SE3f new_global_T_frame = Converter::toSophusSE3(mpTracker->mCurrentFrame.mTcw).inverse().cast<float>();
+
         direct_ba_->Lock();
-        SE3f new_global_T_frame = base_kf_global_T_frame_ * base_T_frame_estimate;
         rgbd_video_->depth_frame_mutable(frame_index)->SetGlobalTFrame(new_global_T_frame);
         rgbd_video_->color_frame_mutable(frame_index)->SetGlobalTFrame(new_global_T_frame);
         last_frame_index_ = frame_index;
         direct_ba_->Unlock();
         cudaEventRecord(odometry_post_event_, stream_);
-        base_kf_tr_frame_ = gt_T_CbCf;
+        base_kf_tr_frame_ = base_T_frame_estimate;
     }
 
     shared_ptr<Keyframe> System::CreateKeyframe(
@@ -1324,6 +1301,7 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
         // reset base_kf_tr_frame_ = identity()
         base_kf_tr_frame_ = SE3f();
 
+        std::cout << "bad slam init! " << frame_index << std::endl;
         // If the poses shall not be estimated, stop here.
         if (!config_.estimate_poses) {
             return new_keyframe;
