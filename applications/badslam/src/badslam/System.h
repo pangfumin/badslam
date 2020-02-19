@@ -310,14 +310,17 @@ public:
     inline Keyframe* base_kf() const { return base_kf_; }
     void SetBaseKF(Keyframe* kf);
 
-    inline vector<SE3f> motion_model_base_kf_tr_frame() const { return base_kf_tr_frame_; }
+    inline vector<SE3f> motion_model_base_kf_tr_frame() const {
+//        return base_kf_tr_frame_;
+        return vector<SE3f>();
+    }
     inline void SetMotionModelBaseKFTrFrame(const vector<SE3f>& base_kf_tr_frame) {
-        base_kf_tr_frame_ = base_kf_tr_frame;
-
-        frame_tr_base_kf_.resize(base_kf_tr_frame_.size());
-        for (usize i = 0; i < base_kf_tr_frame_.size(); ++ i) {
-            frame_tr_base_kf_[i] = base_kf_tr_frame_[i].inverse();
-        }
+//        base_kf_tr_frame_ = base_kf_tr_frame;
+//
+//        frame_tr_base_kf_.resize(base_kf_tr_frame_.size());
+//        for (usize i = 0; i < base_kf_tr_frame_.size(); ++ i) {
+//            frame_tr_base_kf_[i] = base_kf_tr_frame_[i].inverse();
+//        }
     }
 
     inline int last_frame_index() const { return last_frame_index_; }
@@ -349,11 +352,7 @@ public:
             vector<Mat4f>* keyframe_poses,
             vector<int>* keyframe_ids);
 
-    // Using (a) motion model(s), predicts the pose of the next frame based on the
-    // poses of the previous frames.
-    void PredictFramePose(
-            SE3f* base_kf_tr_frame_initial_estimate,
-            SE3f* base_kf_tr_frame_initial_estimate_2);
+
 
     // Estimates the RGB-D frame's pose from odometry based on the last keyframe.
     void RunOdometry(int frame_index);
@@ -392,8 +391,8 @@ public:
     // Last estimated odometry poses, for the motion model.
     // The highest index corresponds to the last frame, index 0 corresponds to the
     // first frame which is still stored.
-    vector<SE3f> base_kf_tr_frame_;
-    vector<SE3f> frame_tr_base_kf_;
+    SE3f base_kf_tr_frame_;
+//    vector<SE3f> frame_tr_base_kf_;
 
     CUDABufferPtr<float> calibrated_depth_;
     CUDABufferPtr<uchar> calibrated_gradmag_;

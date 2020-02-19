@@ -168,6 +168,7 @@ System::System(const BadSlamConfig& config,
         // Start a separate thread for bundle adjustment.
         RestartBAThread();
     }
+    base_kf_tr_frame_ = SE3f();
 
 
     // Output welcome message
@@ -872,18 +873,18 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
             }
         }
 
-        base_kf_tr_frame_.clear();
-        frame_tr_base_kf_.clear();
-
-        if (!last_kf) {
-            base_kf_tr_frame_.push_back(SE3f());
-            frame_tr_base_kf_.push_back(SE3f());
-        } else {
-            base_kf_tr_frame_.push_back(
-                    last_kf->frame_T_global() *
-                    rgbd_video()->depth_frame(current_frame_index)->global_T_frame());
-            frame_tr_base_kf_.push_back(base_kf_tr_frame_.back().inverse());
-        }
+//        base_kf_tr_frame_.clear();
+//        frame_tr_base_kf_.clear();
+//
+//        if (!last_kf) {
+//            base_kf_tr_frame_.push_back(SE3f());
+//            frame_tr_base_kf_.push_back(SE3f());
+//        } else {
+//            base_kf_tr_frame_.push_back(
+//                    last_kf->frame_T_global() *
+//                    rgbd_video()->depth_frame(current_frame_index)->global_T_frame());
+//            frame_tr_base_kf_.push_back(base_kf_tr_frame_.back().inverse());
+//        }
     }
 
     void System::StopBAThreadAndWaitForIt() {
@@ -1086,69 +1087,7 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
         *final_depth_buffer = filtered_depth_buffer_A_.get();
     }
 
-    void System::PredictFramePose(
-            SE3f* base_kf_tr_frame_initial_estimate,
-            SE3f* base_kf_tr_frame_initial_estimate_2) {
-        usize stored_frames = base_kf_tr_frame_.size();
 
-//   constexpr float kMaxDepthToMaxTranslationFactor = 0.8f;  // TODO: make parameter?
-//   constexpr float kMaxAngleThreshold = 90.f * M_PI / 180.f;
-//
-//   float base_kf_max_depth = std::numeric_limits<float>::infinity();
-//   direct_ba_->Lock();
-//   for (int i = static_cast<int>(direct_ba_->keyframes().size()) - 1; i >= 0; -- i) {
-//     if (direct_ba_->keyframes()[i]) {
-//       base_kf_max_depth = direct_ba_->keyframes()[i]->max_depth();
-//     }
-//   }
-//   direct_ba_->Unlock();
-//   float max_translation_threshold_squared =
-//       kMaxDepthToMaxTranslationFactor * base_kf_max_depth *
-//       kMaxDepthToMaxTranslationFactor * base_kf_max_depth;
-
-        if (config_.use_motion_model) {
-            // Constant motion model
-            if (stored_frames >= 2) {
-                *base_kf_tr_frame_initial_estimate =
-                        base_kf_tr_frame_[stored_frames - 1] *
-                        frame_tr_base_kf_[stored_frames - 2] *
-                        base_kf_tr_frame_[stored_frames - 1];
-            } else {
-                        CHECK_EQ(base_kf_tr_frame_.size(), 1);
-                *base_kf_tr_frame_initial_estimate = base_kf_tr_frame_[stored_frames - 1];
-            }
-
-            // Constant motion model without the last frame (for robustness against
-            // outlier frames)
-            if (stored_frames >= 3) {
-                SE3f prev_frame_T_last_frame =
-                        frame_tr_base_kf_[stored_frames - 3] *
-                        base_kf_tr_frame_[stored_frames - 2];
-                *base_kf_tr_frame_initial_estimate_2 =
-                        base_kf_tr_frame_[stored_frames - 2] *
-                        prev_frame_T_last_frame * prev_frame_T_last_frame;
-            } else {
-                *base_kf_tr_frame_initial_estimate_2 = *base_kf_tr_frame_initial_estimate;
-            }
-        } else {
-            // Use the last frame's pose as initial estimate for the next frame.
-            *base_kf_tr_frame_initial_estimate = base_kf_tr_frame_[stored_frames - 1];
-            *base_kf_tr_frame_initial_estimate_2 = *base_kf_tr_frame_initial_estimate;
-        }
-
-        // This does not work if moving frames manually
-//   auto check_prediction = [&](SE3f* pose) {
-//     if (pose->translation().squaredNorm() > max_translation_threshold_squared) {
-//       LOG(WARNING) << "Predicted translation is larger than the threshold, predicting identity instead.";
-//       *pose = SE3f();
-//     } else if (AngleAxisf(pose->unit_quaternion()).angle() > kMaxAngleThreshold) {
-//       LOG(WARNING) << "Predicted rotation is larger than the threshold, predicting identity instead.";
-//       *pose = SE3f();
-//     }
-//   };
-//   check_prediction(base_kf_tr_frame_initial_estimate);
-//   check_prediction(base_kf_tr_frame_initial_estimate_2);
-    }
 
     void System::RunOdometry(int frame_index) {
         // Whether to use gradient magnitudes for direct tracking, or separate x/y
@@ -1262,12 +1201,14 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
 //                base_kf_tr_frame_initial_estimate_2,
 //                &base_T_frame_estimate);
 
+//        std::cout << "base_kf_tr_frame_ 3: " << base_kf_tr_frame_.size()<< std::endl;
+
 
         SE3f base_T_WC = rgbd_video_->groundtruth_pose_frame(base_kf_->frame_index());
         SE3f frame_T_WC = rgbd_video_->groundtruth_pose_frame(frame_index);
         SE3f gt_T_CbCf = base_T_WC.inverse() * frame_T_WC;
-        std::cout << "gt_T_CbCf \n" << gt_T_CbCf.matrix() << std::endl;
-        std::cout << "base_T_frame_estimate \n" << base_T_frame_estimate.matrix() << std::endl;
+//        std::cout << "gt_T_CbCf \n" << gt_T_CbCf.matrix() << std::endl;
+//        std::cout << "base_T_frame_estimate \n" << base_T_frame_estimate.matrix() << std::endl;
         base_T_frame_estimate = gt_T_CbCf;
         direct_ba_->Lock();
         SE3f new_global_T_frame = base_kf_global_T_frame_ * base_T_frame_estimate;
@@ -1276,13 +1217,7 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
         last_frame_index_ = frame_index;
         direct_ba_->Unlock();
         cudaEventRecord(odometry_post_event_, stream_);
-
-        if (base_kf_tr_frame_.size() >= 3) {
-            base_kf_tr_frame_.erase(base_kf_tr_frame_.begin());
-            frame_tr_base_kf_.erase(frame_tr_base_kf_.begin());
-        }
-        base_kf_tr_frame_.push_back(base_T_frame_estimate);
-        frame_tr_base_kf_.push_back(base_T_frame_estimate.inverse());
+        base_kf_tr_frame_ = gt_T_CbCf;
     }
 
     shared_ptr<Keyframe> System::CreateKeyframe(
@@ -1371,7 +1306,7 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
             queued_keyframes_events_.push_back(keyframe_event);
             queued_keyframes_.push_back(new_keyframe);
             queued_keyframes_last_kf_tr_this_kf_.push_back(
-                    base_kf_tr_frame_.empty() ? SE3f() : base_kf_tr_frame_.back());
+                    base_kf_tr_frame_);
 
             // Also queue keyframe image data for loop detection.
             queued_keyframe_gray_images_.push_back(gray_image);
@@ -1386,18 +1321,8 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
             keyframes_added = direct_ba_->keyframes().size();
         }
 
-        // Initialize or rebase base_kf_tr_frame_ / frame_tr_base_kf_.
-        for (int i = 0; i < static_cast<int>(frame_tr_base_kf_.size()) - 1; ++ i) {
-            frame_tr_base_kf_[i] = frame_tr_base_kf_[i] * base_kf_tr_frame_.back();
-            base_kf_tr_frame_[i] = frame_tr_base_kf_.back() * base_kf_tr_frame_[i];
-        }
-        if (frame_tr_base_kf_.empty()) {
-            base_kf_tr_frame_.push_back(SE3f());
-            frame_tr_base_kf_.push_back(SE3f());
-        } else {
-            base_kf_tr_frame_.back() = SE3f();
-            frame_tr_base_kf_.back() = SE3f();
-        }
+        // reset base_kf_tr_frame_ = identity()
+        base_kf_tr_frame_ = SE3f();
 
         // If the poses shall not be estimated, stop here.
         if (!config_.estimate_poses) {
