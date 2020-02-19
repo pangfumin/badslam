@@ -1848,7 +1848,6 @@ void MainWindow::WorkerThreadMain() {
         // cv::waitKey(2);
 
         orbslam_system_->TrackRGBD(imRGB,imD, frame_index_, frame_index_, create_kf_);
-        bool need_orb_keyframe =  orbslam_system_->IsKeyframeNeeded();
         cv::Mat Tcw = orbslam_system_->GetTracker()->mCurrentFrame.GetTcw();
 
 

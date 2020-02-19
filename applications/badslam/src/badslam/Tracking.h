@@ -71,7 +71,6 @@ public:
     // Use this function if you have deactivated local mapping and you only want to localize the camera.
     void InformOnlyTracking(const bool &flag);
 
-    bool keyframe_needed_;
 public:
 
     // Tracking states
@@ -136,7 +135,7 @@ protected:
     void SearchLocalPoints();
 
     bool NeedNewKeyFrame();
-    void CreateNewKeyFrame(const bool& need_dense_keyframe);
+    void CreateNewKeyFrame();
 
     // In case of performing only localization, this flag is true when there are no matches to
     // points in the map. Still tracking will continue if there are enough matches with temporal points.

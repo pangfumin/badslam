@@ -286,15 +286,22 @@ cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const int&
 
     // Check reset
     {
-    unique_lock<mutex> lock(mMutexReset);
-    if(mbReset)
-    {
-        mpTracker->Reset();
-        mbReset = false;
-    }
+        unique_lock<mutex> lock(mMutexReset);
+        if(mbReset)
+        {
+            mpTracker->Reset();
+            mbReset = false;
+        }
     }
 
-    cv::Mat Tcw = mpTracker->GrabImageRGBD(im,depthmap,timestamp, force_keyframe);
+    // Use a very basic keyframe selection strategy: regularly select one
+    // keyframe every keyframe_interval frames.
+    bool create_keyframe =
+            force_keyframe ||
+            ((index - config_.start_frame) % config_.keyframe_interval == 0);
+
+
+    cv::Mat Tcw = mpTracker->GrabImageRGBD(im,depthmap,timestamp, create_keyframe);
 
     unique_lock<mutex> lock2(mMutexState);
     mTrackingState = mpTracker->mState;
@@ -331,11 +338,6 @@ cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const int&
         pose_estimated_ = true;
     }
 
-    // Use a very basic keyframe selection strategy: regularly select one
-    // keyframe every keyframe_interval frames.
-    bool create_keyframe =
-            force_keyframe ||
-            ((index - config_.start_frame) % config_.keyframe_interval == 0);
 
 
     if (create_keyframe) {
@@ -424,9 +426,7 @@ cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const int&
     return Tcw;
 }
 
-bool System::IsKeyframeNeeded() {
-    return mpTracker->keyframe_needed_;
-}
+
 
 void System::ActivateLocalizationMode()
 {

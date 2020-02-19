@@ -43,7 +43,7 @@ class KeyFrameDatabase;
 class SparseKeyFrame
 {
 public:
-    SparseKeyFrame(Frame &F, Map* pMap, KeyFrameDatabase* pKFDB, const bool& need_dense_keyframe = false);
+    SparseKeyFrame(Frame &F, Map* pMap, KeyFrameDatabase* pKFDB);
 
     // Pose functions
     void SetPose(const cv::Mat &Tcw);
@@ -188,9 +188,6 @@ public:
     const int mnMaxY;
     const cv::Mat mK;
 
-
-    // badslam
-    bool dense_keyframe_;
     // The following variables need to be accessed trough a mutex to be thread safe.
 protected:
 
