@@ -365,7 +365,7 @@ void System::DoDenseSlam(const int& index, const bool& need_keyframe) {
                         optimize_depth_intrinsics,
                         optimize_color_intrinsics,
                         config_.do_surfel_updates,
-                        /*optimize_poses*/ true,
+                        /*optimize_poses*/ false,
                         /*optimize_geometry*/ true);
                 num_planned_ba_iterations_ = 0;
             } else {
@@ -1134,6 +1134,8 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
         }
 
         cudaEventRecord(odometry_pre_event_, stream_);
+
+
 
 
         cudaEventRecord(odometry_post_event_, stream_);

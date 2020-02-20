@@ -214,8 +214,11 @@ bool ReadTUMRGBDDatasetAssociatedAndCalibrated(
     LOG(ERROR) << "Could not open associated file: " << associated_filename;
     return false;
   }
-  
-  while (!associated_file.eof() && !associated_file.bad()) {
+
+  int cnt = 0;
+    SE3f first_gt_global_T_frame ;
+
+    while (!associated_file.eof() && !associated_file.bad()) {
     std::getline(associated_file, line);
     if (line.size() == 0 || line[0] == '#') {
       continue;
@@ -264,7 +267,12 @@ bool ReadTUMRGBDDatasetAssociatedAndCalibrated(
     rgbd_video->depth_frames_mutable()->push_back(depth_frame);
     rgbd_video->depth_timestamps_mutable()->push_back(vis::Time(depth_timestamp));
 
-      rgbd_video->groundtruth_pose_frames_mutable()->push_back(gt_global_T_frame);
+    if (cnt == 0) {
+        first_gt_global_T_frame = gt_global_T_frame;
+
+    }
+    gt_global_T_frame = first_gt_global_T_frame.inverse() * gt_global_T_frame;
+    rgbd_video->groundtruth_pose_frames_mutable()->push_back(gt_global_T_frame);
     
     if (width == 0) {
       // Get width and height by loading one image file.
@@ -278,6 +286,8 @@ bool ReadTUMRGBDDatasetAssociatedAndCalibrated(
       height = image_ptr->height();
       image_frame->ClearImageAndDerivedData();
     }
+
+      cnt ++;
   }
 
   // load imu measurements

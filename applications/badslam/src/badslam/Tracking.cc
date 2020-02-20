@@ -449,6 +449,12 @@ void Tracking::Track(const bool& force_keyframe)
             SE3f new_global_T_frame = Converter::toSophusSE3(mCurrentFrame.mTcw).inverse().cast<float>();
 
 
+            SE3f gt_base_T_WC = mpSystem->rgbd_video_->groundtruth_pose_frame(mpSystem->base_kf_->frame_index());
+            SE3f gt_frame_T_WC = mpSystem->rgbd_video_->groundtruth_pose_frame(mCurrentFrame.mnId);
+            SE3f gt_T_CbCf = gt_base_T_WC.inverse() * gt_frame_T_WC;
+
+            new_global_T_frame = gt_frame_T_WC;
+
 
             mpSystem->direct_ba_->Lock();
             mpSystem->rgbd_video_->depth_frame_mutable(mCurrentFrame.mnId)->SetGlobalTFrame(new_global_T_frame);
@@ -457,9 +463,11 @@ void Tracking::Track(const bool& force_keyframe)
             mpSystem->direct_ba_->Unlock();
 
 
+
+
+
             mpSystem->base_kf_tr_frame_ = base_T_frame_estimate;
-
-
+//            mpSystem->base_kf_tr_frame_ = gt_T_CbCf;
 
 
 
