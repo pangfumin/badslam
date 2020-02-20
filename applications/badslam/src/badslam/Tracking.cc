@@ -39,6 +39,7 @@
 #include<iostream>
 
 #include<mutex>
+#include "badslam/direct_ba.h"
 
 
 using namespace std;
@@ -256,6 +257,13 @@ void Tracking::Track(const bool& force_keyframe)
 
         std::cout << "orb slam init!  create first dense keyframe " << mCurrentFrame.mnId << std::endl;
 
+
+        SE3f new_global_T_frame = SE3f();
+        mpSystem->direct_ba_->Lock();
+        mpSystem->rgbd_video_->depth_frame_mutable(mCurrentFrame.mnId)->SetGlobalTFrame(new_global_T_frame);
+        mpSystem->rgbd_video_->color_frame_mutable(mCurrentFrame.mnId)->SetGlobalTFrame(new_global_T_frame);
+        mpSystem->last_frame_index_ = mCurrentFrame.mnId;
+        mpSystem->direct_ba_->Unlock();
         mpSystem->CreateKeyframe(index,
                        rgb_image,
                        final_cpu_depth_map,
@@ -436,12 +444,20 @@ void Tracking::Track(const bool& force_keyframe)
             }
             mlpTemporalPoints.clear();
 
+            cv::Mat T_Ckm1Ck = mpLastKeyFrame->GetPose() * mCurrentFrame.mTcw.inv();
+            SE3f base_T_frame_estimate = Converter::toSophusSE3(T_Ckm1Ck).cast<float>();
+            SE3f new_global_T_frame = Converter::toSophusSE3(mCurrentFrame.mTcw).inverse().cast<float>();
 
-            mpSystem->pose_estimated_ = false;
-                if (mpSystem->config_.estimate_poses && mpSystem->base_kf_) {
-                    mpSystem->RunOdometry(index);
-                    mpSystem->pose_estimated_ = true;
-                }
+
+
+            mpSystem->direct_ba_->Lock();
+            mpSystem->rgbd_video_->depth_frame_mutable(mCurrentFrame.mnId)->SetGlobalTFrame(new_global_T_frame);
+            mpSystem->rgbd_video_->color_frame_mutable(mCurrentFrame.mnId)->SetGlobalTFrame(new_global_T_frame);
+            mpSystem->last_frame_index_ = mCurrentFrame.mnId;
+            mpSystem->direct_ba_->Unlock();
+
+
+            mpSystem->base_kf_tr_frame_ = base_T_frame_estimate;
 
 
 
@@ -451,6 +467,13 @@ void Tracking::Track(const bool& force_keyframe)
             if(force_keyframe || NeedNewKeyFrame()) {
                  CreateNewKeyFrame();
                  new_keyframe_ = true;
+
+                mpSystem->pose_estimated_ = false;
+                if (mpSystem->config_.estimate_poses && mpSystem->base_kf_) {
+                    mpSystem->RunOdometry(index,base_T_frame_estimate, new_global_T_frame );
+                    mpSystem->pose_estimated_ = true;
+                }
+
 
                 mpSystem->CreateKeyframe(index,
                                rgb_image,

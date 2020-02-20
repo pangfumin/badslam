@@ -357,7 +357,8 @@ public:
 
 
     // Estimates the RGB-D frame's pose from odometry based on the last keyframe.
-    void RunOdometry(int frame_index);
+    void RunOdometry(int frame_index, const SE3f& base_T_frame_estimate,
+    const SE3f& new_global_T_frame);
 
     // Adds a keyframe to bundle adjustment. Perform loop detection and closure.
     // If loop detection is disabled, gray_image may be empty.
