@@ -79,7 +79,7 @@ struct CUDAMatrix3x4 {
   __forceinline__ __host__ __device__ CUDAMatrix3x4() {}
   
   // Copy constructor.
-  __forceinline__ __host__ CUDAMatrix3x4(const CUDAMatrix3x4& other)
+  __forceinline__ __host__ __device__ CUDAMatrix3x4(const CUDAMatrix3x4& other)
       : row0(other.row0),
         row1(other.row1),
         row2(other.row2) {}
@@ -133,6 +133,21 @@ struct CUDAMatrix3x4 {
         row1.x * point.x + row1.y * point.y + row1.z * point.z,
         row2.x * point.x + row2.y * point.y + row2.z * point.z);
   }
+
+  __forceinline__ __host__ __device__
+  void FromInverse(const CUDAMatrix3x4& inv)  {
+    row0.x = inv.row0.x; row0.y = inv.row1.x; row0.z = inv.row2.x;
+    row1.x = inv.row0.y; row1.y = inv.row1.y; row1.z = inv.row2.y;
+    row2.x = inv.row0.z; row2.y = inv.row1.z; row2.z = inv.row2.z;
+
+    float x = - (row0.x * row0.w + row0.y * row1.w + row0.z * row2.w);
+    float y = - (row1.x * row0.w + row1.y * row1.w + row1.z * row2.w);
+    float z = - (row2.x * row0.w + row2.y * row1.w + row2.z * row2.w);
+    row0.w = x;
+    row1.w = y;
+    row2.w = z;
+  }
+  
   
   // Row-wise storage.
   float4 row0;

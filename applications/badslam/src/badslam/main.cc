@@ -148,10 +148,16 @@ int LIBVIS_QT_MAIN(int argc, char** argv) {
       !cmd_parser.Flag("--no_geometric_residuals", "Disables the use of geometric"
       " residuals (comparing depth images and surfel positions).");
   
+
+  // Note (pang): for sake of changing form of geometry jacobian w.r.t camera pose
+  // Not use  photometric residuals for now. Thus we can avoiding of change photometric
+  // Jacobian form. 
   bad_slam_config.use_photometric_residuals =
       !cmd_parser.Flag("--no_photometric_residuals", "Disables the use of"
       " photometric residuals (comparing visible-light images and surfel"
       " descriptors).");
+  bad_slam_config.use_photometric_residuals = false;
+  
   
   bad_slam_config.optimize_intrinsics =
       cmd_parser.Flag("--optimize_intrinsics", "Perform self-calibration of"

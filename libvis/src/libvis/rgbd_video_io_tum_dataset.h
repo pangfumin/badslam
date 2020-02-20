@@ -117,6 +117,49 @@ bool ReadTUMRGBDTrajectory(
   return true;
 }
 
+template <typename T>
+bool ReadImuMeas(
+    const char* path,
+    vector<vis::Time>* imu_timestamps,
+    vector<Eigen::Matrix<T,6,1>>* imu_meas) {
+  ifstream imu_file(path);
+  if (!imu_file) {
+    LOG(ERROR) << "Could not open imu file: " << path;
+    return false;
+  }
+  string line;
+  getline(imu_file, line);
+  while (! line.empty()) {
+    char time_string[128];
+    Eigen::VectorXd imu(6);
+    
+    if (line[0] == '#') {
+      getline(imu_file, line);
+      continue;
+    }
+    if (sscanf(line.c_str(), "%s %lf %lf %lf %lf %lf %lf ",
+        time_string,
+        &imu[0],
+        &imu[1],
+        &imu[2],
+        &imu[3],
+        &imu[4],
+        &imu[5]) != 7) {
+      LOG(ERROR) << "Cannot read imu! Line:";
+      LOG(ERROR) << line;
+      return false;
+    }
+    
+    Eigen::Matrix<T,6,1> imu_T = imu.cast<T>();
+    imu_timestamps->push_back(vis::Time(atof(time_string)));
+    imu_meas->push_back(imu_T);
+    
+    getline(imu_file, line);
+  }
+  return true;
+}
+
+
 // Reads a variant of the TUM RGB-D dataset format. Returns true if the data
 // was successfully read. Compared to the raw RGB-D datasets (as tgz archives),
 // the calibration has to be added in a file calibration.txt, given as
@@ -131,6 +174,10 @@ bool ReadTUMRGBDDatasetAssociatedAndCalibrated(
     RGBDVideo<ColorT, DepthT>* rgbd_video) {
   rgbd_video->color_frames_mutable()->clear();
   rgbd_video->depth_frames_mutable()->clear();
+  rgbd_video->color_timestamps_mutable()->clear();
+  rgbd_video->depth_timestamps_mutable()->clear();
+  rgbd_video->imu_frames_mutable()->clear();
+  rgbd_video->imu_timestamps_mutable()->clear();
   
   string calibration_path = string(dataset_folder_path) + "/calibration.txt";
   ifstream calibration_file(calibration_path.c_str());
@@ -205,12 +252,14 @@ bool ReadTUMRGBDDatasetAssociatedAndCalibrated(
     ImageFramePtr<ColorT, SE3f> image_frame(new ImageFrame<ColorT, SE3f>(color_filepath, rgb_timestamp, rgb_time_string));
     image_frame->SetGlobalTFrame(rgb_global_T_frame);
     rgbd_video->color_frames_mutable()->push_back(image_frame);
+    rgbd_video->color_timestamps_mutable()->push_back(vis::Time(rgb_timestamp));
     
     string depth_filepath =
         string(dataset_folder_path) + "/" + depth_filename;
     ImageFramePtr<DepthT, SE3f> depth_frame(new ImageFrame<DepthT, SE3f>(depth_filepath, depth_timestamp, depth_time_string));
     depth_frame->SetGlobalTFrame(depth_global_T_frame);
     rgbd_video->depth_frames_mutable()->push_back(depth_frame);
+    rgbd_video->depth_timestamps_mutable()->push_back(vis::Time(depth_timestamp));
     
     if (width == 0) {
       // Get width and height by loading one image file.
@@ -225,6 +274,16 @@ bool ReadTUMRGBDDatasetAssociatedAndCalibrated(
       image_frame->ClearImageAndDerivedData();
     }
   }
+
+  // load imu measurements
+  // string imu_filepath =
+  //       string(dataset_folder_path) + "/" + "imu.txt";
+
+  // if (!ReadImuMeas(imu_filepath.c_str(), rgbd_video->imu_timestamps_mutable(), rgbd_video->imu_frames_mutable())) {
+  //     return false;
+  // }
+
+ 
   
   float camera_parameters[4];
   camera_parameters[0] = fx;
@@ -235,6 +294,13 @@ bool ReadTUMRGBDDatasetAssociatedAndCalibrated(
       new PinholeCamera4f(width, height, camera_parameters));
   rgbd_video->depth_camera_mutable()->reset(
       new PinholeCamera4f(width, height, camera_parameters));
+
+  std::cout << "color image: " << rgbd_video->color_frames_mutable()->size() << std::endl;
+  std::cout << "color ts   : " << rgbd_video->color_timestamps_mutable()->size() << std::endl;
+  std::cout << "depth image: " << rgbd_video->depth_frames_mutable()->size() << std::endl;
+  std::cout << "depth ts   : " << rgbd_video->depth_timestamps_mutable()->size() << std::endl;
+  std::cout << "imu   image: " << rgbd_video->imu_frames_mutable()->size() << std::endl;
+  std::cout << "imu   ts   : " << rgbd_video->imu_timestamps_mutable()->size() << std::endl;
   
   return true;
 }
