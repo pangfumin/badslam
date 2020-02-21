@@ -222,9 +222,6 @@ void Tracking::Track(const bool& force_keyframe)
     // Update target frame end time for real-time simulation.
     mpSystem->target_frame_end_time_ += 1. / mpSystem->config_.target_frame_rate;
 
-    // Pre-process the RGB-D frame.
-    shared_ptr<Image<u16>> final_cpu_depth_map;
-    mpSystem->PreprocessFrame(index, &(mpSystem->final_depth_buffer_), &final_cpu_depth_map);
 
 
     if(mState==NO_IMAGES_YET)
@@ -256,6 +253,10 @@ void Tracking::Track(const bool& force_keyframe)
 
 
         std::cout << "orb slam init!  create first dense keyframe " << mCurrentFrame.mnId << std::endl;
+
+        // Pre-process the RGB-D frame.
+        shared_ptr<Image<u16>> final_cpu_depth_map;
+        mpSystem->PreprocessFrame(index, &(mpSystem->final_depth_buffer_), &final_cpu_depth_map);
 
 
         SE3f new_global_T_frame = SE3f();
@@ -449,11 +450,11 @@ void Tracking::Track(const bool& force_keyframe)
             SE3f new_global_T_frame = Converter::toSophusSE3(mCurrentFrame.mTcw).inverse().cast<float>();
 
 
-            SE3f gt_base_T_WC = mpSystem->rgbd_video_->groundtruth_pose_frame(mpSystem->base_kf_->frame_index());
-            SE3f gt_frame_T_WC = mpSystem->rgbd_video_->groundtruth_pose_frame(mCurrentFrame.mnId);
-            SE3f gt_T_CbCf = gt_base_T_WC.inverse() * gt_frame_T_WC;
-
-            new_global_T_frame = gt_frame_T_WC;
+//            SE3f gt_base_T_WC = mpSystem->rgbd_video_->groundtruth_pose_frame(mpSystem->base_kf_->frame_index());
+//            SE3f gt_frame_T_WC = mpSystem->rgbd_video_->groundtruth_pose_frame(mCurrentFrame.mnId);
+//            SE3f gt_T_CbCf = gt_base_T_WC.inverse() * gt_frame_T_WC;
+//
+//            new_global_T_frame = gt_frame_T_WC;
 
 
             mpSystem->direct_ba_->Lock();
@@ -475,6 +476,11 @@ void Tracking::Track(const bool& force_keyframe)
             if(force_keyframe || NeedNewKeyFrame()) {
                  CreateNewKeyFrame();
                  new_keyframe_ = true;
+
+                // Pre-process the RGB-D frame.
+                shared_ptr<Image<u16>> final_cpu_depth_map;
+                mpSystem->PreprocessFrame(index, &(mpSystem->final_depth_buffer_), &final_cpu_depth_map);
+
 
                 mpSystem->pose_estimated_ = false;
                 if (mpSystem->config_.estimate_poses && mpSystem->base_kf_) {

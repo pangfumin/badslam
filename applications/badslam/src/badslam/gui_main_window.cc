@@ -1861,8 +1861,8 @@ void MainWindow::WorkerThreadMain() {
     // Optionally, visualize the input images.
     emit UpdateCurrentFrameImagesSignal(frame_index_, true);
    // Update the 3D visualization.
-    (orbslam_system_)->UpdateOdometryVisualization(frame_index_, show_current_frame_);
-//    (orbslam_system_)->GetViewer()->Run();
+//    (orbslam_system_)->UpdateOdometryVisualization(frame_index_, show_current_frame_);
+    (orbslam_system_)->GetViewer()->Run();
     
  
     

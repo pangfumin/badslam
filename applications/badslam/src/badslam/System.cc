@@ -307,9 +307,9 @@ cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const int&
     mTrackedKeyPointsUn = mpTracker->mCurrentFrame.mvKeysUn;
 
 
-
-
     bool need_keyframe = mpTracker->new_keyframe_;
+
+
     DoDenseSlam(index, need_keyframe);
 
     return Tcw;

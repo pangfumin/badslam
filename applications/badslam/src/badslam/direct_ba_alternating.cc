@@ -486,6 +486,7 @@ void DirectBA::BundleAdjustmentAlternating(
     
     
     // --- GEOMETRY OPTIMIZATION ---
+      optimize_geometry = false;
     if (optimize_geometry) {
       cudaEventRecord(ba_geometry_optimization_pre_event_, stream);
       OptimizeGeometryIterationCUDA(
@@ -510,6 +511,7 @@ void DirectBA::BundleAdjustmentAlternating(
     // --- SURFEL MERGE ---
     // For keyframes for which new surfels were created at the start of the
     // iteration (a subset of the active keyframes).
+      do_surfel_updates = false;
     if (do_surfel_updates) {
       u32 surfel_count = surfel_count_;
       cudaEventRecord(ba_surfel_merge_pre_event_, stream);
@@ -564,6 +566,7 @@ void DirectBA::BundleAdjustmentAlternating(
     
     // --- POSE OPTIMIZATION ---
     usize num_converged = 0;
+      optimize_poses = false;
     if (optimize_poses) {
       cudaEventRecord(ba_pose_optimization_pre_event_, stream);
       for (const shared_ptr<Keyframe>& keyframe : keyframes_) {
@@ -607,6 +610,7 @@ void DirectBA::BundleAdjustmentAlternating(
     // --- INTRINSICS OPTIMIZATION ---
     bool optimize_intrinsics =
         optimize_depth_intrinsics || optimize_color_intrinsics;
+      optimize_intrinsics = false;
     if (optimize_intrinsics) {
       cudaEventRecord(ba_intrinsics_optimization_pre_event_, stream);
       PinholeCamera4f out_color_camera;
