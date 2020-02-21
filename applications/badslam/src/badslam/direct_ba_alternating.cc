@@ -566,7 +566,7 @@ void DirectBA::BundleAdjustmentAlternating(
     
     // --- POSE OPTIMIZATION ---
     usize num_converged = 0;
-//      optimize_poses = false;
+      optimize_poses = false;
     if (optimize_poses) {
       cudaEventRecord(ba_pose_optimization_pre_event_, stream);
       for (const shared_ptr<Keyframe>& keyframe : keyframes_) {
