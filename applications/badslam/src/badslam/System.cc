@@ -1252,29 +1252,7 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
         }
 
 
-        // Create surfels from the new keyframe, and / or plan BA iterations.
-        if (keyframes_added >= 2) {
-            // If surfel updates are not done within BA, we always have to
-            // manually create new surfels for new keyframes.
-            if (!config_.do_surfel_updates) {
-                direct_ba_->CreateSurfelsForKeyframe(stream_, true, new_keyframe);
-            }
 
-            // After every new keyframe, plan some bundle adjustment iterations.
-            num_planned_ba_iterations_ += config_.max_num_ba_iterations_per_keyframe;
-
-            // Trigger surfel updates within the next BA iteration.
-            if (config_.target_frame_rate > 0 || config_.parallel_ba) {
-                direct_ba_->IncreaseBAIterationCount();
-            }
-        } else {
-            // This is the first keyframe. Only create surfels from it, since there
-            // are no multi-view constraints to optimize yet.
-            direct_ba_->CreateSurfelsForKeyframe(stream_, false, new_keyframe);
-            // Make sure not to run into any possible concurrency issues with
-            // CreateSurfelsForKeyframe() and possible BA iterations issued later.
-            cudaStreamSynchronize(stream_);
-        }
 
         return new_keyframe;
     }
@@ -1404,6 +1382,7 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
                     lock.lock();
                     mutex_locked = true;
                 }
+
 
                 shared_ptr<Keyframe> new_keyframe = queued_keyframes_.front();
                 const SE3f& last_kf_tr_this_kf = queued_keyframes_last_kf_tr_this_kf_.front();

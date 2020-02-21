@@ -265,10 +265,19 @@ void Tracking::Track(const bool& force_keyframe)
         mpSystem->rgbd_video_->color_frame_mutable(mCurrentFrame.mnId)->SetGlobalTFrame(new_global_T_frame);
         mpSystem->last_frame_index_ = mCurrentFrame.mnId;
         mpSystem->direct_ba_->Unlock();
-        mpSystem->CreateKeyframe(index,
+        shared_ptr<Keyframe> new_keyframe = mpSystem->CreateKeyframe(index,
                        rgb_image,
                        final_cpu_depth_map,
                        *(mpSystem->final_depth_buffer_));
+
+        // Create surfels from the new keyframe, and / or plan BA iterations.
+
+        // This is the first keyframe. Only create surfels from it, since there
+        // are no multi-view constraints to optimize yet.
+        mpSystem->direct_ba_->CreateSurfelsForKeyframe(mpSystem->stream_, false, new_keyframe);
+        // Make sure not to run into any possible concurrency issues with
+        // CreateSurfelsForKeyframe() and possible BA iterations issued later.
+        cudaStreamSynchronize(mpSystem->stream_);
 
     }
     else
@@ -489,10 +498,24 @@ void Tracking::Track(const bool& force_keyframe)
                 }
 
 
-                mpSystem->CreateKeyframe(index,
+                shared_ptr<Keyframe> new_keyframe = mpSystem->CreateKeyframe(index,
                                rgb_image,
                                final_cpu_depth_map,
                                *(mpSystem->final_depth_buffer_));
+
+                // If surfel updates are not done within BA, we always have to
+                // manually create new surfels for new keyframes.
+                if (!mpSystem->config_.do_surfel_updates) {
+                    mpSystem->direct_ba_->CreateSurfelsForKeyframe(mpSystem->stream_, true, new_keyframe);
+                }
+
+                // After every new keyframe, plan some bundle adjustment iterations.
+                mpSystem->num_planned_ba_iterations_ += mpSystem->config_.max_num_ba_iterations_per_keyframe;
+
+                // Trigger surfel updates within the next BA iteration.
+                if (mpSystem->config_.target_frame_rate > 0 || mpSystem->config_.parallel_ba) {
+                    mpSystem->direct_ba_->IncreaseBAIterationCount();
+                }
 
             }
                
