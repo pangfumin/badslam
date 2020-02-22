@@ -116,7 +116,6 @@ public:
     // Returns the camera pose (empty if tracking fails).
     cv::Mat TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const int& index,  const double &timestamp, const bool& force_keyframe);
 
-    void DoDenseSlam(const int& index, const bool& force_keyframe);
 
     // This stops local mapping thread (map building) and performs only camera tracking.
     void ActivateLocalizationMode();
@@ -375,16 +374,7 @@ public:
             cv::Mat_<u8> gray_image,
             const shared_ptr<Image<u16>>& depth_image);
 
-    // In the parallel-BA case (i.e., if parallel_ba is set to true in the
-    // bad_slam_config), this function signals to the BA thread to start BA
-    // iterations in parallel.
-    void StartParallelIterations(
-            int num_planned_iterations,
-            bool optimize_depth_intrinsics,
-            bool optimize_color_intrinsics,
-            bool do_surfel_updates,
-            bool optimize_poses,
-            bool optimize_geometry);
+
 
     // Main function of the thread which runs bundle adjustment in parallel. This
     // is only used if BA is configured to run in parallel.
