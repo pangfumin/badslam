@@ -430,16 +430,7 @@ void DirectBA::BundleAdjustment(
     optimize_color_intrinsics = false;
   }
   
-  if (use_pcg) {
-    BundleAdjustmentPCG(
-        stream, optimize_depth_intrinsics, optimize_color_intrinsics,
-        do_surfel_updates, optimize_poses, optimize_geometry,
-        min_iterations, max_iterations,
-        pcg_max_inner_iterations, pcg_max_keyframes,
-        active_keyframe_window_start, active_keyframe_window_end,
-        increase_ba_iteration_count, iterations_done, converged,
-        time_limit, timer, progress_function);
-  } else {
+
     BundleAdjustmentAlternating(
         stream, optimize_depth_intrinsics, optimize_color_intrinsics,
         do_surfel_updates, optimize_poses, optimize_geometry,
@@ -447,7 +438,6 @@ void DirectBA::BundleAdjustment(
         active_keyframe_window_start, active_keyframe_window_end,
         increase_ba_iteration_count, iterations_done, converged,
         time_limit, timer, progress_function);
-  }
 }
 
 void DirectBA::AssignColors(
