@@ -32,6 +32,7 @@
 #include <iomanip>
 
 #include "badslam/System.h"
+#include "badslam/LocalMapping.h"
 
 namespace vis {
 
@@ -569,7 +570,7 @@ bool SavePoses(
 
 bool SaveCalibration(
     cudaStream_t stream,
-    const DirectBA& direct_ba,
+    const LocalMapping& direct_ba,
     const string& export_base_path) {
   {
     std::string intrinsics_path = export_base_path + ".depth_intrinsics.txt";
@@ -624,7 +625,7 @@ bool SaveCalibration(
 
 
 bool LoadCalibration(
-    DirectBA* direct_ba,
+        LocalMapping* direct_ba,
     const string& import_base_path) {
   {
     std::string intrinsics_path = import_base_path + ".depth_intrinsics.txt";
@@ -693,7 +694,7 @@ bool LoadCalibration(
 
 bool SavePointCloudAsPLY(
     cudaStream_t stream,
-    const DirectBA& direct_ba,
+    const LocalMapping& direct_ba,
     const string& export_path) {
   Point3fC3u8NfCloud cloud;
   direct_ba.ExportToPointCloud(stream, &cloud);

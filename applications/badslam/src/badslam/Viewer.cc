@@ -29,7 +29,7 @@
 #include "libvis/camera.h"
 #include "render_window.h"
 //#include "bad_slam.h"
-#include "direct_ba.h"
+//#include "direct_ba.h"
 #include "Converter.h"
 #include "libvis/point_cloud.h"
 #include "libvis/any_image.h"
@@ -68,11 +68,11 @@ void Viewer::Run()
 
     // cudaEventRecord(update_visualization_pre_event_, stream_);
     
-    mpSystem->direct_ba_->Lock();
+    mpSystem->GetLocalMapper()->Lock();
     
-    vis::PinholeCamera4f depth_camera = mpSystem->direct_ba_->depth_camera_no_lock();
+    vis::PinholeCamera4f depth_camera = mpSystem->GetLocalMapper()->depth_camera_no_lock();
     
-    mpSystem->direct_ba_->Unlock();
+    mpSystem->GetLocalMapper()->Unlock();
     
     
     unique_lock<mutex> render_mutex_lock(mpSystem->render_window_->render_mutex());

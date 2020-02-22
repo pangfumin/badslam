@@ -33,15 +33,16 @@
 #include <libvis/rgbd_video.h>
 #include <libvis/sophus.h>
 
-#include "badslam/direct_ba.h"
+//#include "badslam/direct_ba.h"
 #include "badslam/keyframe.h"
+#include "badslam/LocalMapping.h"
 
 namespace vis {
 
 // Given a DirectBA instance, stores the current keyframe poses in the provided
 // vector.
 void RememberKeyframePoses(
-    DirectBA* dense_ba,
+    LocalMapping* dense_ba,
     vector<SE3f>* original_keyframe_T_global);
 
 // Given previously stored keyframe poses (with RememberKeyframePoses()) and the
@@ -52,7 +53,7 @@ void RememberKeyframePoses(
 void ExtrapolateAndInterpolateKeyframePoseChanges(
     u32 start_frame,
     u32 end_frame,
-    DirectBA* dense_ba,
+    LocalMapping* dense_ba,
     const vector<SE3f>& original_keyframe_T_global,
     RGBDVideo<Vec3u8, u16>* rgbd_video);
 

@@ -33,7 +33,7 @@
 #include <libvis/libvis.h>
 #include <libvis/rgbd_video.h>
 
-#include "badslam/direct_ba.h"
+//#include "badslam/direct_ba.h"
 #include "badslam/System.h"
 
 namespace vis {
@@ -66,18 +66,18 @@ bool SavePoses(
 // .color_intrinsics.txt, .deformation.txt.
 bool SaveCalibration(
     cudaStream_t stream,
-    const DirectBA& dense_ba,
+    const LocalMapping& dense_ba,
     const string& export_base_path);
 
 // Loads a calibration that was saved with SaveCalibration().
 bool LoadCalibration(
-    DirectBA* dense_ba,
+            LocalMapping* dense_ba,
     const string& import_base_path);
 
 // Saves the surfel point cloud in PLY format. Includes colors and normals.
 bool SavePointCloudAsPLY(
     cudaStream_t stream,
-    const DirectBA& dense_ba,
+    const LocalMapping& dense_ba,
     const string& export_path);
 
 }

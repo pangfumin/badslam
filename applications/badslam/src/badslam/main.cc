@@ -51,7 +51,7 @@
 #include "badslam/cuda_depth_processing.cuh"
 #include "badslam/cuda_image_processing.cuh"
 #include "badslam/cuda_image_processing.h"
-#include "badslam/direct_ba.h"
+//#include "badslam/direct_ba.h"
 #include "badslam/gui_main_window.h"
 #include "badslam/gui_settings_window.h"
 #include "badslam/io.h"

@@ -121,53 +121,7 @@ System::System(const BadSlamConfig& config,
         valid_ = false;
         return;
     }
-    direct_ba_.reset(new DirectBA(
-            config.max_surfel_count,
-            config.raw_to_float_depth,
-            config.baseline_fx,
-            config.sparse_surfel_cell_size,
-            config.surfel_merge_dist_factor,
-            config.min_observation_count_while_bootstrapping_1,
-            config.min_observation_count_while_bootstrapping_2,
-            config.min_observation_count,
-            *color_camera,
-            *depth_camera,
-            config.pyramid_level_for_color,
-            config.use_geometric_residuals,
-            config.use_photometric_residuals,
-            render_window,
-            (config_.start_frame < rgbd_video->frame_count()) ?
-            rgbd_video->depth_frame(config_.start_frame)->global_T_frame() :
-            SE3f()));
 
-    // if (config.enable_loop_detection) {
-    //   if (!boost::filesystem::exists(config.loop_detection_vocabulary_path)) {
-    //     LOG(ERROR) << "File given as config.loop_detection_vocabulary_path does not exist: " << config.loop_detection_vocabulary_path;
-    //     LOG(ERROR) << "Disabling loop detection!";
-    //     config_.enable_loop_detection = false;
-    //   } else if (!boost::filesystem::exists(config.loop_detection_pattern_path)) {
-    //     LOG(ERROR) << "File given as config.loop_detection_pattern_path does not exist: " << config.loop_detection_pattern_path;
-    //     LOG(ERROR) << "Disabling loop detection!";
-    //     config_.enable_loop_detection = false;
-    //   } else {
-    //     loop_detector_.reset(new LoopDetector(
-    //         config.loop_detection_vocabulary_path,
-    //         config.loop_detection_pattern_path,
-    //         config.loop_detection_images_width,
-    //         config.loop_detection_images_height,
-    //         config.raw_to_float_depth,
-    //         rgbd_video->depth_camera()->width(),
-    //         rgbd_video->depth_camera()->height(),
-    //         config.num_scales,
-    //         config.GetLoopDetectionImageFrequency(),
-    //         config.parallel_loop_detection));
-    //   }
-    // }
-
-/*    if (config.parallel_ba) {
-        // Start a separate thread for bundle adjustment.
-        RestartBAThread();
-    }*/
     base_kf_tr_frame_ = SE3f();
 
 
@@ -228,7 +182,24 @@ System::System(const BadSlamConfig& config,
                              mpMap, mpKeyFrameDatabase, strSettingsFile, mSensor);
 
     //Initialize the Local Mapping thread and launch
-    mpLocalMapper = new LocalMapping(this, mpMap, mSensor==MONOCULAR);
+    mpLocalMapper = new LocalMapping(this, mpMap, mSensor==MONOCULAR,
+                                     config.max_surfel_count,
+                                     config.raw_to_float_depth,
+                                     config.baseline_fx,
+                                     config.sparse_surfel_cell_size,
+                                     config.surfel_merge_dist_factor,
+                                     config.min_observation_count_while_bootstrapping_1,
+                                     config.min_observation_count_while_bootstrapping_2,
+                                     config.min_observation_count,
+                                     *color_camera,
+                                     *depth_camera,
+                                     config.pyramid_level_for_color,
+                                     config.use_geometric_residuals,
+                                     config.use_photometric_residuals,
+                                     render_window,
+                                     (config_.start_frame < rgbd_video->frame_count()) ?
+                                     rgbd_video->depth_frame(config_.start_frame)->global_T_frame() :
+                                     SE3f());
     mptLocalMapping = new thread(&vis::LocalMapping::Run,mpLocalMapper, opengl_context_);
 
     //Initialize the Loop Closing thread and launch
@@ -339,9 +310,9 @@ void System::DoDenseSlam(const int& index, const bool& need_keyframe) {
             static int bundle_adjustment_counter = 0;
             ++ bundle_adjustment_counter;
 
-            direct_ba_->Lock();
-            usize keyframes_size = direct_ba_->keyframes().size() + queued_keyframes_.size();
-            direct_ba_->Unlock();
+            mpLocalMapper->Lock();
+            usize keyframes_size = mpLocalMapper->keyframes().size() + queued_keyframes_.size();
+            mpLocalMapper->Unlock();
 
             // Decide whether to optimize intrinsics.
             // TODO: This contains some heuristics which are not configurable by parameters!
@@ -379,7 +350,7 @@ void System::DoDenseSlam(const int& index, const bool& need_keyframe) {
                         /*min_iterations*/ 0,  // loop_closed ? 2 : 0
                                     num_planned_ba_iterations_,
                         /*active_keyframe_window_start*/ config_.disable_deactivation ? 0 : -1,
-                        /*active_keyframe_window_end*/ config_.disable_deactivation ? (direct_ba_->keyframes().size() - 1) : -1,
+                        /*active_keyframe_window_end*/ config_.disable_deactivation ? (mpLocalMapper->keyframes().size() - 1) : -1,
                         /*increase_ba_iteration_count*/ (config_.target_frame_rate == 0),
                                     &iterations_done,
                                     &converged,
@@ -602,7 +573,7 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
 
         cudaEventRecord(update_visualization_pre_event_, stream_);
 
-        direct_ba_->Lock();
+        mpLocalMapper->Lock();
 
         // Update the estimated trajectory.
         vector<Vec3f> estimated_trajectory(frame_index + 1);
@@ -621,9 +592,9 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
             AppendQueuedKeyframesToVisualization(&keyframe_poses, &keyframe_ids);
         }
 
-        PinholeCamera4f depth_camera = direct_ba_->depth_camera_no_lock();
+        PinholeCamera4f depth_camera = mpLocalMapper->depth_camera_no_lock();
 
-        direct_ba_->Unlock();
+        mpLocalMapper->Unlock();
 
 
         unique_lock<mutex> render_mutex_lock(render_window_->render_mutex());
@@ -661,8 +632,8 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
             rgb_buffer_->DownloadAsync(stream_, reinterpret_cast<Image<uchar3>*>(&color_buffer));
             cudaStreamSynchronize(stream_);
 
-            Image<float> cfactor_buffer_cpu(direct_ba_->cfactor_buffer()->width(), direct_ba_->cfactor_buffer()->height());
-            direct_ba_->cfactor_buffer()->DownloadAsync(stream_, &cfactor_buffer_cpu);
+            Image<float> cfactor_buffer_cpu(mpLocalMapper->cfactor_buffer()->width(), mpLocalMapper->cfactor_buffer()->height());
+            mpLocalMapper->cfactor_buffer()->DownloadAsync(stream_, &cfactor_buffer_cpu);
             cudaStreamSynchronize(stream_);
 
             usize point_count = 0;
@@ -686,14 +657,14 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
                         continue;
                     }
                     float depth = RawToCalibratedDepth(
-                            direct_ba_->a(),
-                            cfactor_buffer_cpu(x / direct_ba_->sparse_surfel_cell_size(),
-                                               y / direct_ba_->sparse_surfel_cell_size()),
+                            mpLocalMapper->a(),
+                            cfactor_buffer_cpu(x / mpLocalMapper->sparse_surfel_cell_size(),
+                                               y / mpLocalMapper->sparse_surfel_cell_size()),
                             config_.raw_to_float_depth,
                             depth_u16);
 
                     Point3fC3u8& point = current_frame_cloud->at(point_index);
-                    point.position() = depth * direct_ba_->depth_camera().UnprojectFromPixelCenterConv(Vec2f(x, y));
+                    point.position() = depth * mpLocalMapper->depth_camera().UnprojectFromPixelCenterConv(Vec2f(x, y));
                     point.color() = color_buffer(x, y);  // for uniform blue color: Vec3u8(80, 80, 255);
                     ++ point_index;
                 }
@@ -798,9 +769,9 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
             std::function<bool (int)> progress_function) {
         // NOTE: Could skip the extra-/interpolation step if no non-keyframes exist.
         vector<SE3f> original_keyframe_T_global;
-        RememberKeyframePoses(direct_ba_.get(), &original_keyframe_T_global);
+        RememberKeyframePoses(mpLocalMapper, &original_keyframe_T_global);
 
-        direct_ba_->BundleAdjustment(
+        mpLocalMapper->BundleAdjustment(
                 stream_,
                 optimize_depth_intrinsics,
                 optimize_color_intrinsics,
@@ -825,7 +796,7 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
         vis::ExtrapolateAndInterpolateKeyframePoseChanges(
                 config_.start_frame,
                 frame_index,
-                direct_ba_.get(),
+                mpLocalMapper,
                 original_keyframe_T_global,
                 rgbd_video_);
 
@@ -838,7 +809,7 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
     void System::ClearMotionModel(int current_frame_index) {
         // Find the last keyframe
         Keyframe* last_kf = nullptr;
-        auto& keyframes = direct_ba_->keyframes();
+        auto& keyframes = mpLocalMapper->keyframes();
         for (int i = static_cast<int>(keyframes.size()) - 1; i >= 0; -- i) {
             if (keyframes[i]) {
                 last_kf = keyframes[i].get();
@@ -866,7 +837,7 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
         }
 
         // Signal to the BA thread that it should exit
-        unique_lock<mutex> lock(direct_ba_->Mutex());
+        unique_lock<mutex> lock(mpLocalMapper->Mutex());
         quit_requested_ = true;
         lock.unlock();
         zero_iterations_condition_.notify_all();
@@ -914,9 +885,9 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
             vector<int>* keyframe_ids) {
         bool have_last_global_tr_frame = false;
         SE3f last_global_tr_frame;
-        if (!direct_ba_->keyframes().empty()) {
+        if (!mpLocalMapper->keyframes().empty()) {
             have_last_global_tr_frame = true;
-            last_global_tr_frame = direct_ba_->keyframes().back()->global_T_frame();
+            last_global_tr_frame = mpLocalMapper->keyframes().back()->global_T_frame();
         }
 
         for (usize i = 0; i < queued_keyframes_.size(); ++ i) {
@@ -1004,10 +975,10 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
         // Thread-safe camera / depth params access.
         // Be aware though that the content of the cfactor_buffer in depth_params can
         // still change since this points to GPU data.
-        direct_ba_->Lock();
-        PinholeCamera4f depth_camera = direct_ba_->depth_camera_no_lock();
-        DepthParameters depth_params = direct_ba_->depth_params_no_lock();
-        direct_ba_->Unlock();
+        mpLocalMapper->Lock();
+        PinholeCamera4f depth_camera = mpLocalMapper->depth_camera_no_lock();
+        DepthParameters depth_params = mpLocalMapper->depth_params_no_lock();
+        mpLocalMapper->Unlock();
 
         ComputeNormalsCUDA(
                 stream_,
@@ -1104,13 +1075,13 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
 
         // Get a consistent set of camera and depth parameters for odometry
         // tracking (important for the parallel BA case).
-        direct_ba_->Lock();
-        PinholeCamera4f color_camera = direct_ba_->color_camera_no_lock();
-        PinholeCamera4f depth_camera = direct_ba_->depth_camera_no_lock();
-        DepthParameters depth_params = direct_ba_->depth_params_no_lock();
+        mpLocalMapper->Lock();
+        PinholeCamera4f color_camera = mpLocalMapper->color_camera_no_lock();
+        PinholeCamera4f depth_camera = mpLocalMapper->depth_camera_no_lock();
+        DepthParameters depth_params = mpLocalMapper->depth_params_no_lock();
 
 
-        direct_ba_->Unlock();
+        mpLocalMapper->Unlock();
 
         CalibrateDepthAndTransformColorToDepthCUDA(
                 stream_,
@@ -1153,10 +1124,10 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
         CUDA_CHECKED_CALL(cudaMemGetInfo(&free_bytes, &total_bytes));
         if (free_bytes < static_cast<usize>(config_.min_free_gpu_memory_mb) * 1024 * 1024 + kApproxKeyframeSize) {
                     LOG(WARNING) << "The available GPU memory becomes low. Merging keyframes now, but be aware that this has received little testing and may lead to instability.";
-            direct_ba_->Lock();
+            mpLocalMapper->Lock();
             // direct_ba_->MergeKeyframes(stream_, loop_detector_.get());
-            direct_ba_->MergeKeyframes(stream_);
-            direct_ba_->Unlock();
+            mpLocalMapper->MergeKeyframes(stream_);
+            mpLocalMapper->Unlock();
         }
 
         cudaEventRecord(keyframe_creation_pre_event_, stream_);
@@ -1175,7 +1146,7 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
         // Allocate and add keyframe.
         // TODO: Should the min/max depth here be extended by the half association
         //       range at these depths?
-        direct_ba_->Lock();  // lock here since the Keyframe constructor accesses an RGBDVideo pose
+        mpLocalMapper->Lock();  // lock here since the Keyframe constructor accesses an RGBDVideo pose
         shared_ptr<Keyframe> new_keyframe(new Keyframe(
                 stream_,
                 frame_index,
@@ -1200,7 +1171,7 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
         // it after BA (but since it's cached, it does not get partially updated
         // during BA).
         base_kf_global_T_frame_ = base_kf_->global_T_frame();
-        direct_ba_->Unlock();
+        mpLocalMapper->Unlock();
         cudaEventRecord(keyframe_creation_post_event_, stream_);
 
 
@@ -1236,15 +1207,15 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
             const shared_ptr<Keyframe>& new_keyframe,
             cv::Mat_<u8> gray_image,
             const shared_ptr<Image<u16>>& depth_image) {
-        direct_ba_->Lock();
-        direct_ba_->AddKeyframe(new_keyframe);
+        mpLocalMapper->Lock();
+        mpLocalMapper->AddKeyframe(new_keyframe);
 
         // Get a consistent set of camera and depth parameters for loop
         // closure handling (important for the parallel BA case).
-        PinholeCamera4f color_camera = direct_ba_->color_camera_no_lock();
-        PinholeCamera4f depth_camera = direct_ba_->depth_camera_no_lock();
-        DepthParameters depth_params = direct_ba_->depth_params_no_lock();
-        direct_ba_->Unlock();
+        PinholeCamera4f color_camera = mpLocalMapper->color_camera_no_lock();
+        PinholeCamera4f depth_camera = mpLocalMapper->depth_camera_no_lock();
+        DepthParameters depth_params = mpLocalMapper->depth_params_no_lock();
+        mpLocalMapper->Unlock();
 
         // // Check for loops.
         // if (loop_detector_) {
@@ -1278,7 +1249,7 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
             bool do_surfel_updates,
             bool optimize_poses,
             bool optimize_geometry) {
-        direct_ba_->Lock();
+        mpLocalMapper->Lock();
 
         // Store options.
         ParallelBAOptions options;
@@ -1300,7 +1271,7 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
 //        }
         parallel_ba_iteration_queue_.push_back(options);
 
-        direct_ba_->Unlock();
+        mpLocalMapper->Unlock();
         zero_iterations_condition_.notify_all();
     }
 
@@ -1316,7 +1287,7 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
         }
 
         while (true) {
-            unique_lock<mutex> lock(direct_ba_->Mutex());
+            unique_lock<mutex> lock(mpLocalMapper->Mutex());
 
             while (parallel_ba_iteration_queue_.empty() && !quit_requested_) {
                 zero_iterations_condition_.wait(lock);
@@ -1343,9 +1314,9 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
                 const SE3f& last_kf_tr_this_kf = queued_keyframes_last_kf_tr_this_kf_.front();
 
                 // Convert relative to absolute pose
-                if (!direct_ba_->keyframes().empty()) {
+                if (!mpLocalMapper->keyframes().empty()) {
                     new_keyframe->set_global_T_frame(
-                            direct_ba_->keyframes().back()->global_T_frame() * last_kf_tr_this_kf);
+                            mpLocalMapper->keyframes().back()->global_T_frame() * last_kf_tr_this_kf);
                 }
 
                 std::cout << "add new keyframe: " <<  std::endl;
@@ -1380,7 +1351,7 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
 
             // Do a BA iteration.
             vector<SE3f> original_keyframe_T_global;
-            RememberKeyframePoses(direct_ba_.get(), &original_keyframe_T_global);
+            RememberKeyframePoses(mpLocalMapper, &original_keyframe_T_global);
 
             // TODO: Currently, this always runs on all keyframes using the
             //       active_keyframe_window_start/end parameters (i.e., there is no
@@ -1389,7 +1360,7 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
                 // The PCG-based solver implementation does not do any locking, so it is unsafe to use it in parallel.
                         LOG(WARNING) << "PCG-based solving is not supported for real-time running, using the alternating solver instead. Use --sequential_ba to be able to use the PCG-based solver.";
             }
-            direct_ba_->BundleAdjustment(
+            mpLocalMapper->BundleAdjustment(
                     thread_stream,
                     options.optimize_depth_intrinsics && config_.use_geometric_residuals,
                     options.optimize_color_intrinsics && config_.use_photometric_residuals,
@@ -1400,23 +1371,23 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
                     /*max_iterations*/ 1,
                     /*use_pcg*/ false,
                     /*active_keyframe_window_start*/ 0,
-                    /*active_keyframe_window_end*/ direct_ba_->keyframes().size() - 1,
+                    /*active_keyframe_window_end*/ mpLocalMapper->keyframes().size() - 1,
                     /*increase_ba_iteration_count*/ false,
                     nullptr,
                     nullptr,
                     0,
                     nullptr);
 
-            direct_ba_->Lock();
+            mpLocalMapper->Lock();
             vis::ExtrapolateAndInterpolateKeyframePoseChanges(
                     config_.start_frame,
                     last_frame_index_,
-                    direct_ba_.get(),
+                    mpLocalMapper,
                     original_keyframe_T_global,
                     rgbd_video_);
             // Update base_kf_global_T_frame_
             base_kf_global_T_frame_ = base_kf_->global_T_frame();
-            direct_ba_->Unlock();
+            mpLocalMapper->Unlock();
         }
 
         cudaStreamDestroy(thread_stream);

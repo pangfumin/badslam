@@ -39,7 +39,7 @@
 #include<iostream>
 
 #include<mutex>
-#include "badslam/direct_ba.h"
+//#include "badslam/direct_ba.h"
 
 
 using namespace std;
@@ -262,11 +262,11 @@ void Tracking::Track(const bool& force_keyframe)
 
 
         SE3f new_global_T_frame = SE3f();
-        mpSystem->direct_ba_->Lock();
+        mpSystem->GetLocalMapper()->Lock();
         mpSystem->rgbd_video_->depth_frame_mutable(mCurrentFrame.mnId)->SetGlobalTFrame(new_global_T_frame);
         mpSystem->rgbd_video_->color_frame_mutable(mCurrentFrame.mnId)->SetGlobalTFrame(new_global_T_frame);
         mpSystem->last_frame_index_ = mCurrentFrame.mnId;
-        mpSystem->direct_ba_->Unlock();
+        mpSystem->GetLocalMapper()->Unlock();
         shared_ptr<Keyframe> new_keyframe = mpSystem->CreateKeyframe(index,
                        rgb_image,
                        final_cpu_depth_map,
@@ -278,7 +278,7 @@ void Tracking::Track(const bool& force_keyframe)
 
         // If bundle adjustment is running in parallel, place the keyframe
         // in a queue from which it will be added later.
-        mpSystem->direct_ba_->Lock();
+        mpSystem->GetLocalMapper()->Lock();
 
         ParallelBAOptions options;
         options.optimize_depth_intrinsics = false;
@@ -303,7 +303,7 @@ void Tracking::Track(const bool& force_keyframe)
 //        mpSystem->queued_keyframe_depth_images_.push_back( mpSystem->config_.parallel_loop_detection ? nullptr : depth_image);
 
 
-        mpSystem->direct_ba_->Unlock();
+        mpSystem->GetLocalMapper()->Unlock();
 
 
         // reset base_kf_tr_frame_ = identity()
@@ -313,7 +313,7 @@ void Tracking::Track(const bool& force_keyframe)
 
         // This is the first keyframe. Only create surfels from it, since there
         // are no multi-view constraints to optimize yet.
-        mpSystem->direct_ba_->CreateSurfelsForKeyframe(mpSystem->stream_, false, new_keyframe);
+        mpSystem->GetLocalMapper()->CreateSurfelsForKeyframe(mpSystem->stream_, false, new_keyframe);
         // Make sure not to run into any possible concurrency issues with
         // CreateSurfelsForKeyframe() and possible BA iterations issued later.
         cudaStreamSynchronize(mpSystem->stream_);
@@ -507,11 +507,11 @@ void Tracking::Track(const bool& force_keyframe)
 //            new_global_T_frame = gt_frame_T_WC;
 
 
-            mpSystem->direct_ba_->Lock();
+            mpSystem->GetLocalMapper()->Lock();
             mpSystem->rgbd_video_->depth_frame_mutable(mCurrentFrame.mnId)->SetGlobalTFrame(new_global_T_frame);
             mpSystem->rgbd_video_->color_frame_mutable(mCurrentFrame.mnId)->SetGlobalTFrame(new_global_T_frame);
             mpSystem->last_frame_index_ = mCurrentFrame.mnId;
-            mpSystem->direct_ba_->Unlock();
+            mpSystem->GetLocalMapper()->Unlock();
 
 
 
@@ -547,7 +547,7 @@ void Tracking::Track(const bool& force_keyframe)
 
                 // If bundle adjustment is running in parallel, place the keyframe
                 // in a queue from which it will be added later.
-                mpSystem->direct_ba_->Lock();
+                mpSystem->GetLocalMapper()->Lock();
                 ParallelBAOptions options;
                 options.optimize_depth_intrinsics = false;
                 options.optimize_color_intrinsics = false;
@@ -567,10 +567,9 @@ void Tracking::Track(const bool& force_keyframe)
 
                 // Also queue keyframe image data for loop detection.
                 mpSystem->queued_keyframe_gray_images_.push_back(gray_image);
-//                mpSystem->queued_keyframe_depth_images_.push_back( mpSystem->config_.parallel_loop_detection ? nullptr : depth_image);
 
 
-                mpSystem->direct_ba_->Unlock();
+                mpSystem->GetLocalMapper()->Unlock();
 
 
                 // reset base_kf_tr_frame_ = identity()
@@ -580,7 +579,7 @@ void Tracking::Track(const bool& force_keyframe)
                 // If surfel updates are not done within BA, we always have to
                 // manually create new surfels for new keyframes.
                 if (!mpSystem->config_.do_surfel_updates) {
-                    mpSystem->direct_ba_->CreateSurfelsForKeyframe(mpSystem->stream_, true, new_keyframe);
+                    mpSystem->GetLocalMapper()->CreateSurfelsForKeyframe(mpSystem->stream_, true, new_keyframe);
                 }
 
                 // After every new keyframe, plan some bundle adjustment iterations.
@@ -588,7 +587,7 @@ void Tracking::Track(const bool& force_keyframe)
 
                 // Trigger surfel updates within the next BA iteration.
                 if (mpSystem->config_.target_frame_rate > 0 || mpSystem->config_.parallel_ba) {
-                    mpSystem->direct_ba_->IncreaseBAIterationCount();
+                    mpSystem->GetLocalMapper()->IncreaseBAIterationCount();
                 }
 
                 CreateNewKeyFrame();

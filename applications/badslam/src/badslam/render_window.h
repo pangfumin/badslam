@@ -53,7 +53,7 @@
 
 namespace vis {
 
-class DirectBA;
+class LocalMapping;
 class Keyframe;
 struct TimerHelper;
 
@@ -86,7 +86,7 @@ class BadSlamRenderWindow : public RenderWindowCallbacks {
   // Tells the render window about the DirectBA instance. Required for some
   // debugging functionality only: right-clicking keyframes can access the
   // keyframe data then.
-  void SetDirectBA(DirectBA* dense_ba);
+  void SetDirectBA(LocalMapping* dense_ba);
   
   // Overrides from RenderWindowCallbacks for initialization, rendering, and
   // window event handling. NOTE: These must be called from the Qt thread only.
@@ -392,7 +392,7 @@ class BadSlamRenderWindow : public RenderWindowCallbacks {
   OpenGLContext qt_gl_context_;
   
   bool embedded_in_gui_;
-  DirectBA* dense_ba_;  // non-threadsafe access, for debugging only!
+  LocalMapping* dense_ba_;  // non-threadsafe access, for debugging only!
 };
 
 }

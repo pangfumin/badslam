@@ -31,7 +31,7 @@
 namespace vis {
 
 void RememberKeyframePoses(
-    DirectBA* dense_ba,
+        LocalMapping* dense_ba,
     vector<SE3f>* original_keyframe_T_global) {
   original_keyframe_T_global->resize(dense_ba->keyframes().size());
   for (usize keyframe_index = 0; keyframe_index < dense_ba->keyframes().size(); ++ keyframe_index) {
@@ -45,7 +45,7 @@ void RememberKeyframePoses(
 void ExtrapolateAndInterpolateKeyframePoseChanges(
     u32 start_frame,
     u32 end_frame,
-    DirectBA* dense_ba,
+    LocalMapping* dense_ba,
     const vector<SE3f>& original_keyframe_T_global,
     RGBDVideo<Vec3u8, u16>* rgbd_video) {
   end_frame = std::min<int>(end_frame, rgbd_video->frame_count() - 1);

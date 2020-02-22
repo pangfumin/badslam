@@ -44,7 +44,8 @@
 #include <libvis/render_window_qt_opengl.h>
 
 #include "badslam/kernels.h"
-#include "badslam/direct_ba.h"
+//#include "badslam/direct_ba.h"
+#include "badslam/LocalMapping.h"
 #include "badslam/util.cuh"
 #include "badslam/keyframe.h"
 
@@ -128,7 +129,7 @@ BadSlamRenderWindow::BadSlamRenderWindow(
 
 BadSlamRenderWindow::~BadSlamRenderWindow() {}
 
-void BadSlamRenderWindow::SetDirectBA(DirectBA* dense_ba) {
+void BadSlamRenderWindow::SetDirectBA(LocalMapping* dense_ba) {
   dense_ba_ = dense_ba;
 }
 

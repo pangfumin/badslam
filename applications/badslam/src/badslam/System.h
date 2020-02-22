@@ -156,7 +156,7 @@ public:
 
     Tracking* GetTracker() const { return mpTracker; }
     Viewer* GetViewer() const { return mpViewer; }
-//    std::shared_ptr<vis::BadSlam> GetBadSlam() const { return badslam_; }
+    LocalMapping* GetLocalMapper() const { return mpLocalMapper; }
     Map* GetMap() const { return mpMap; }
 
 private:
@@ -310,11 +310,8 @@ public:
     inline const BadSlamConfig& config() const { return config_; }
 
     // Access to the contained DirectBA object.
-    inline const DirectBA& direct_ba() const { return *direct_ba_; }
-    inline DirectBA& direct_ba() { return *direct_ba_; }
-
-    // // Access to the contained LoopDetector object.
-    // inline LoopDetector* loop_detector() { return loop_detector_.get(); }
+    inline const LocalMapping& direct_ba() const { return *mpLocalMapper; }
+    inline LocalMapping& direct_ba() { return *mpLocalMapper; }
 
     // Access to the RGBDVideo.
     inline RGBDVideo<Vec3u8, u16>* rgbd_video() const { return rgbd_video_; };
@@ -475,8 +472,6 @@ public:
 
     // Bundle adjustment attributes.
     int num_planned_ba_iterations_ = 0;
-    unique_ptr<DirectBA> direct_ba_;
-    // unique_ptr<LoopDetector> loop_detector_;
 
     // The input video. Points to externally managed memory.
     // TODO: Make this a shared_ptr?
