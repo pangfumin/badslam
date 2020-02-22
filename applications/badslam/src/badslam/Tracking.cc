@@ -280,6 +280,16 @@ void Tracking::Track(const bool& force_keyframe)
         // in a queue from which it will be added later.
         mpSystem->direct_ba_->Lock();
 
+        ParallelBAOptions options;
+        options.optimize_depth_intrinsics = false;
+        options.optimize_color_intrinsics = false;
+        options.do_surfel_updates = true;
+        options.optimize_poses = true;
+        options.optimize_geometry = true;
+
+        mpSystem->parallel_ba_iteration_queue_.push_back(options);
+
+
         cudaEvent_t keyframe_event;
         cudaEventCreate(&keyframe_event, cudaEventDisableTiming);
         cudaEventRecord(keyframe_event,  mpSystem->stream_);
@@ -290,7 +300,7 @@ void Tracking::Track(const bool& force_keyframe)
 
         // Also queue keyframe image data for loop detection.
         mpSystem->queued_keyframe_gray_images_.push_back(gray_image);
-        mpSystem->queued_keyframe_depth_images_.push_back( mpSystem->config_.parallel_loop_detection ? nullptr : depth_image);
+//        mpSystem->queued_keyframe_depth_images_.push_back( mpSystem->config_.parallel_loop_detection ? nullptr : depth_image);
 
 
         mpSystem->direct_ba_->Unlock();
@@ -538,6 +548,14 @@ void Tracking::Track(const bool& force_keyframe)
                 // If bundle adjustment is running in parallel, place the keyframe
                 // in a queue from which it will be added later.
                 mpSystem->direct_ba_->Lock();
+                ParallelBAOptions options;
+                options.optimize_depth_intrinsics = false;
+                options.optimize_color_intrinsics = false;
+                options.do_surfel_updates = true;
+                options.optimize_poses = true;
+                options.optimize_geometry = true;
+
+                mpSystem->parallel_ba_iteration_queue_.push_back(options);
 
                 cudaEvent_t keyframe_event;
                 cudaEventCreate(&keyframe_event, cudaEventDisableTiming);
@@ -549,7 +567,7 @@ void Tracking::Track(const bool& force_keyframe)
 
                 // Also queue keyframe image data for loop detection.
                 mpSystem->queued_keyframe_gray_images_.push_back(gray_image);
-                mpSystem->queued_keyframe_depth_images_.push_back( mpSystem->config_.parallel_loop_detection ? nullptr : depth_image);
+//                mpSystem->queued_keyframe_depth_images_.push_back( mpSystem->config_.parallel_loop_detection ? nullptr : depth_image);
 
 
                 mpSystem->direct_ba_->Unlock();

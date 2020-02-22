@@ -34,13 +34,16 @@
 #include "libvis/point_cloud.h"
 #include "libvis/any_image.h"
 #include "libvis/image.h"
+#include "System.h"
+#include "badslam/trajectory_deformation.h"
 
 
 
 namespace vis
 {
 
-LocalMapping::LocalMapping(Map *pMap, const float bMonocular):
+LocalMapping::LocalMapping(System* pSys, Map *pMap, const float bMonocular):
+        mpSystem(pSys),
     mbMonocular(bMonocular), mbResetRequested(false), mbFinishRequested(false), mbFinished(true), mpMap(pMap),
     mbAbortBA(false), mbStopped(false), mbStopRequested(false), mbNotStop(false), mbAcceptKeyFrames(true)
 {
@@ -56,8 +59,17 @@ void LocalMapping::SetTracker(Tracking *pTracker)
     mpTracker=pTracker;
 }
 
-void LocalMapping::Run()
+void LocalMapping::Run(OpenGLContext* opengl_context)
 {
+    cudaStream_t thread_stream;
+    int stream_priority_low, stream_priority_high;
+    cudaDeviceGetStreamPriorityRange(&stream_priority_low, &stream_priority_high);
+    cudaStreamCreateWithPriority(&thread_stream, cudaStreamDefault, stream_priority_low);
+
+    OpenGLContext no_context;
+    if (opengl_context) {
+        SwitchOpenGLContext(*opengl_context, &no_context);
+    }
 
     mbFinished = false;
 
@@ -70,8 +82,9 @@ void LocalMapping::Run()
         // Check if there are keyframes in the queue
         if(CheckNewKeyFrames())
         {
-            
+            RunDenseBAOneStep(thread_stream);
             RunOneStep();
+//
         }
         else if(Stop())
         {
@@ -86,6 +99,7 @@ void LocalMapping::Run()
 
         ResetIfRequested();
 
+
         // Tracking will see that Local Mapping is busy
         SetAcceptKeyFrames(true);
 
@@ -95,7 +109,114 @@ void LocalMapping::Run()
         usleep(3000);
     }
 
+    cudaStreamDestroy(thread_stream);
+
+    if (opengl_context) {
+        SwitchOpenGLContext(no_context);
+    }
+
+
     SetFinish();
+}
+
+void LocalMapping::RunDenseBAOneStep(cudaStream_t stream) {
+    unique_lock<mutex> lock(mpSystem->direct_ba_->Mutex());
+
+
+
+    // Pop item from parallel_ba_iteration_queue_
+    ParallelBAOptions options = mpSystem->parallel_ba_iteration_queue_.front();
+    mpSystem->parallel_ba_iteration_queue_.erase(mpSystem->parallel_ba_iteration_queue_.begin());
+
+//    std::cout << "BAThreadMain: " <<  std::endl;
+    // Add any queued keyframes (within the lock).
+    bool mutex_locked = true;
+    if (!mpSystem->queued_keyframes_.empty()) {
+        if (!mutex_locked) {
+            lock.lock();
+            mutex_locked = true;
+        }
+
+
+        shared_ptr<Keyframe> new_keyframe = mpSystem->queued_keyframes_.front();
+        const SE3f& last_kf_tr_this_kf = mpSystem->queued_keyframes_last_kf_tr_this_kf_.front();
+
+        // Convert relative to absolute pose
+        if (!mpSystem->direct_ba_->keyframes().empty()) {
+            new_keyframe->set_global_T_frame(
+                    mpSystem->direct_ba_->keyframes().back()->global_T_frame() * last_kf_tr_this_kf);
+        }
+
+//        std::cout << "add new keyframe: " <<  std::endl;
+//
+        cv::Mat_<u8> gray_image = mpSystem->queued_keyframe_gray_images_.front();
+        shared_ptr<Image<u16>> depth_image = nullptr ;// = mpSystem->queued_keyframe_depth_images_.front();
+        cudaEvent_t keyframe_event =mpSystem-> queued_keyframes_events_.front();
+
+        mpSystem->queued_keyframes_.erase(mpSystem->queued_keyframes_.begin());
+        mpSystem->queued_keyframes_last_kf_tr_this_kf_.erase(mpSystem->queued_keyframes_last_kf_tr_this_kf_.begin());
+        mpSystem->queued_keyframe_gray_images_.erase(mpSystem->queued_keyframe_gray_images_.begin());
+//        mpSystem->queued_keyframe_depth_images_.erase(mpSystem->queued_keyframe_depth_images_.begin());
+        mpSystem->queued_keyframes_events_.erase(mpSystem->queued_keyframes_events_.begin());
+
+        // Release lock while performing loop detection.
+        lock.unlock();
+        mutex_locked = false;
+
+        // Wait for the "odometry" stream to fully upload the data of the latest
+        // keyframe before (potentially) issuing GPU commands on it with the "BA" stream.
+        cudaStreamWaitEvent(stream, keyframe_event, 0);
+        cudaEventDestroy(keyframe_event);
+
+        mpSystem->AddKeyframeToBA(stream,
+                        new_keyframe,
+                        gray_image,
+                        depth_image);
+    }
+    if (mutex_locked) {
+        lock.unlock();
+    }
+
+    // Do a BA iteration.
+    vector<SE3f> original_keyframe_T_global;
+    RememberKeyframePoses(mpSystem->direct_ba_.get(), &original_keyframe_T_global);
+
+    // TODO: Currently, this always runs on all keyframes using the
+    //       active_keyframe_window_start/end parameters (i.e., there is no
+    //       support for keyframe deactivation).
+    if (mpSystem->config_.use_pcg) {
+        // The PCG-based solver implementation does not do any locking, so it is unsafe to use it in parallel.
+                LOG(WARNING) << "PCG-based solving is not supported for real-time running, using the alternating solver instead. Use --sequential_ba to be able to use the PCG-based solver.";
+    }
+    mpSystem->direct_ba_->BundleAdjustment(
+            stream,
+            options.optimize_depth_intrinsics && mpSystem->config_.use_geometric_residuals,
+            options.optimize_color_intrinsics && mpSystem->config_.use_photometric_residuals,
+            options.do_surfel_updates,
+            options.optimize_poses,
+            options.optimize_geometry,
+            /*min_iterations*/ 0,
+            /*max_iterations*/ 1,
+            /*use_pcg*/ false,
+            /*active_keyframe_window_start*/ 0,
+            /*active_keyframe_window_end*/ mpSystem->direct_ba_->keyframes().size() - 1,
+            /*increase_ba_iteration_count*/ false,
+            nullptr,
+            nullptr,
+            0,
+            nullptr);
+
+    mpSystem->direct_ba_->Lock();
+    vis::ExtrapolateAndInterpolateKeyframePoseChanges(
+            mpSystem->config_.start_frame,
+            mpSystem->last_frame_index_,
+            mpSystem->direct_ba_.get(),
+            original_keyframe_T_global,
+            mpSystem->rgbd_video_);
+    // Update base_kf_global_T_frame_
+    mpSystem->base_kf_global_T_frame_ = mpSystem->base_kf_->global_T_frame();
+    mpSystem->direct_ba_->Unlock();
+
 }
 
 void LocalMapping::RunOneStep() {

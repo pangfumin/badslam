@@ -86,9 +86,7 @@ void Viewer::Run()
     if (mpSystem->GetTracker()->mState == Tracking::OK) {
         // 1. set current pose
         cv::Mat Tcw = mpTracker->mCurrentFrame.GetTcw();
-        std::cout << "Tcw: " << Tcw << std::endl;
         Sophus::SE3f pose = vis::Converter::toSophusSE3(Tcw).cast<float>().inverse();  // show Twc
-        std::cout << "pose: " << pose.matrix() << std::endl;
 
         mpSystem->render_window_->SetCurrentFramePoseNoLock(pose.matrix());
     }

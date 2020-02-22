@@ -164,10 +164,10 @@ System::System(const BadSlamConfig& config,
     //   }
     // }
 
-    if (config.parallel_ba) {
+/*    if (config.parallel_ba) {
         // Start a separate thread for bundle adjustment.
         RestartBAThread();
-    }
+    }*/
     base_kf_tr_frame_ = SE3f();
 
 
@@ -228,8 +228,8 @@ System::System(const BadSlamConfig& config,
                              mpMap, mpKeyFrameDatabase, strSettingsFile, mSensor);
 
     //Initialize the Local Mapping thread and launch
-    mpLocalMapper = new LocalMapping( mpMap, mSensor==MONOCULAR);
-    mptLocalMapping = new thread(&vis::LocalMapping::Run,mpLocalMapper);
+    mpLocalMapper = new LocalMapping(this, mpMap, mSensor==MONOCULAR);
+    mptLocalMapping = new thread(&vis::LocalMapping::Run,mpLocalMapper, opengl_context_);
 
     //Initialize the Loop Closing thread and launch
     mpLoopCloser = new LoopClosing(mpMap, mpKeyFrameDatabase, mpVocabulary, mSensor!=MONOCULAR);
@@ -309,8 +309,8 @@ cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const int&
 
     bool need_keyframe = mpTracker->new_keyframe_;
 
-
-    DoDenseSlam(index, need_keyframe);
+    keyframe_created_ = need_keyframe;
+//    DoDenseSlam(index, need_keyframe);
 
     return Tcw;
 }
@@ -449,10 +449,10 @@ void System::Shutdown()
     {
         usleep(5000);
     }
-
-    if (ba_thread_) {
-        StopBAThreadAndWaitForIt();
-    }
+//
+//    if (ba_thread_) {
+//        StopBAThreadAndWaitForIt();
+//    }
 
     for (cudaEvent_t event : queued_keyframes_events_) {
         cudaEventDestroy(event);

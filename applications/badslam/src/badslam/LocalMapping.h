@@ -28,6 +28,8 @@
 #include "KeyFrameDatabase.h"
 
 #include <mutex>
+#include "libvis/opengl_context.h"
+#include <cuda_runtime.h>
 
 namespace vis
 {
@@ -35,19 +37,24 @@ namespace vis
 class Tracking;
 class LoopClosing;
 class Map;
+class System;
+
+
+
 
 class LocalMapping
 {
 public:
-    LocalMapping( Map* pMap, const float bMonocular);
+    LocalMapping(System* pSys, Map* pMap, const float bMonocular);
 
     void SetLoopCloser(LoopClosing* pLoopCloser);
 
     void SetTracker(Tracking* pTracker);
 
     // Main function
-    void Run();
+    void Run(OpenGLContext* opengl_context);
     void RunOneStep();
+    void RunDenseBAOneStep(cudaStream_t stream);
 
     void InsertKeyFrame(SparseKeyFrame* pKF);
 
@@ -86,6 +93,9 @@ protected:
     cv::Mat ComputeF12(SparseKeyFrame* &pKF1, SparseKeyFrame* &pKF2);
 
     cv::Mat SkewSymmetricMatrix(const cv::Mat &v);
+
+    // System
+    System* mpSystem;
 
     bool mbMonocular;
 
