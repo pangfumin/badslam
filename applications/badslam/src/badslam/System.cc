@@ -1203,53 +1203,6 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
         direct_ba_->Unlock();
         cudaEventRecord(keyframe_creation_post_event_, stream_);
 
-        cv::Mat_<u8> gray_image;
-
-        // if (loop_detector_) {
-        //   gray_image = CreateGrayImageForLoopDetection(*rgb_image);
-
-        //   if (config_.parallel_loop_detection) {
-        //     loop_detector_->QueueForLoopDetection(gray_image, depth_image);
-        //     gray_image.release();
-        //     CHECK(gray_image.empty());
-        //   }
-        // }
-
-        int keyframes_added;
-        if (config_.parallel_ba) {
-            // If bundle adjustment is running in parallel, place the keyframe
-            // in a queue from which it will be added later.
-            direct_ba_->Lock();
-
-            cudaEvent_t keyframe_event;
-            cudaEventCreate(&keyframe_event, cudaEventDisableTiming);
-            cudaEventRecord(keyframe_event, stream_);
-            queued_keyframes_events_.push_back(keyframe_event);
-            queued_keyframes_.push_back(new_keyframe);
-            queued_keyframes_last_kf_tr_this_kf_.push_back(
-                    base_kf_tr_frame_);
-
-            // Also queue keyframe image data for loop detection.
-            queued_keyframe_gray_images_.push_back(gray_image);
-            queued_keyframe_depth_images_.push_back(config_.parallel_loop_detection ? nullptr : depth_image);
-
-            keyframes_added = queued_keyframes_.size() + direct_ba_->keyframes().size();
-
-            direct_ba_->Unlock();
-        } else {
-            // In case of sequential BA, add the keyframe directly.
-            AddKeyframeToBA(stream_, new_keyframe, gray_image, depth_image);
-            keyframes_added = direct_ba_->keyframes().size();
-        }
-
-        // reset base_kf_tr_frame_ = identity()
-        base_kf_tr_frame_ = SE3f();
-
-//        std::cout << "bad slam init! " << frame_index << std::endl;
-        // If the poses shall not be estimated, stop here.
-        if (!config_.estimate_poses) {
-            return new_keyframe;
-        }
 
 
 
@@ -1335,16 +1288,17 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
         options.optimize_poses = optimize_poses;
         options.optimize_geometry = optimize_geometry;
 
-        int max_queued_iterations = config_.max_num_ba_iterations_per_keyframe;
-        int iterations_to_queue =
-                std::min<int>(max_queued_iterations - parallel_ba_iteration_queue_.size(),
-                              num_planned_iterations);
-        if (iterations_to_queue > 0) {
-            parallel_ba_iteration_queue_.reserve(parallel_ba_iteration_queue_.size() + iterations_to_queue);
-            for (int i = 0; i < iterations_to_queue; ++ i) {
-                parallel_ba_iteration_queue_.push_back(options);
-            }
-        }
+//        int max_queued_iterations = config_.max_num_ba_iterations_per_keyframe;
+//        int iterations_to_queue =
+//                std::min<int>(max_queued_iterations - parallel_ba_iteration_queue_.size(),
+//                              num_planned_iterations);
+//        if (iterations_to_queue > 0) {
+//            parallel_ba_iteration_queue_.reserve(parallel_ba_iteration_queue_.size() + iterations_to_queue);
+//            for (int i = 0; i < iterations_to_queue; ++ i) {
+//                parallel_ba_iteration_queue_.push_back(options);
+//            }
+//        }
+        parallel_ba_iteration_queue_.push_back(options);
 
         direct_ba_->Unlock();
         zero_iterations_condition_.notify_all();
@@ -1375,6 +1329,7 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
             ParallelBAOptions options = parallel_ba_iteration_queue_.front();
             parallel_ba_iteration_queue_.erase(parallel_ba_iteration_queue_.begin());
 
+            std::cout << "BAThreadMain: " <<  std::endl;
             // Add any queued keyframes (within the lock).
             bool mutex_locked = true;
             while (!queued_keyframes_.empty()) {
@@ -1392,6 +1347,8 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
                     new_keyframe->set_global_T_frame(
                             direct_ba_->keyframes().back()->global_T_frame() * last_kf_tr_this_kf);
                 }
+
+                std::cout << "add new keyframe: " <<  std::endl;
 
                 cv::Mat_<u8> gray_image = queued_keyframe_gray_images_.front();
                 shared_ptr<Image<u16>> depth_image = queued_keyframe_depth_images_.front();

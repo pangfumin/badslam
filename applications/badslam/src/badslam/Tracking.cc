@@ -237,8 +237,10 @@ void Tracking::Track(const bool& force_keyframe)
 
     if(mState==NOT_INITIALIZED)
     {
+
+        SparseKeyFrame* first_keyframe = NULL;
         if(mSensor==System::STEREO || mSensor==System::RGBD) {
-            StereoInitialization();
+            first_keyframe =StereoInitialization();
             new_keyframe_ = true;
         }
 
@@ -270,6 +272,33 @@ void Tracking::Track(const bool& force_keyframe)
                        final_cpu_depth_map,
                        *(mpSystem->final_depth_buffer_));
 
+        cv::Mat_<u8> gray_image;
+
+
+
+        // If bundle adjustment is running in parallel, place the keyframe
+        // in a queue from which it will be added later.
+        mpSystem->direct_ba_->Lock();
+
+        cudaEvent_t keyframe_event;
+        cudaEventCreate(&keyframe_event, cudaEventDisableTiming);
+        cudaEventRecord(keyframe_event,  mpSystem->stream_);
+        mpSystem->queued_keyframes_events_.push_back(keyframe_event);
+        mpSystem->queued_keyframes_.push_back(new_keyframe);
+        mpSystem->queued_keyframes_last_kf_tr_this_kf_.push_back(
+                mpSystem->base_kf_tr_frame_);
+
+        // Also queue keyframe image data for loop detection.
+        mpSystem->queued_keyframe_gray_images_.push_back(gray_image);
+        mpSystem->queued_keyframe_depth_images_.push_back( mpSystem->config_.parallel_loop_detection ? nullptr : depth_image);
+
+
+        mpSystem->direct_ba_->Unlock();
+
+
+        // reset base_kf_tr_frame_ = identity()
+        mpSystem->base_kf_tr_frame_ = SE3f();
+
         // Create surfels from the new keyframe, and / or plan BA iterations.
 
         // This is the first keyframe. Only create surfels from it, since there
@@ -279,6 +308,8 @@ void Tracking::Track(const bool& force_keyframe)
         // CreateSurfelsForKeyframe() and possible BA iterations issued later.
         cudaStreamSynchronize(mpSystem->stream_);
 
+        // Insert KeyFrame in the map
+        mpMap->AddKeyFrame(first_keyframe);
     }
     else
     {
@@ -483,9 +514,6 @@ void Tracking::Track(const bool& force_keyframe)
 
             // Check if we need to insert a new keyframe
             if(force_keyframe || NeedNewKeyFrame()) {
-                 CreateNewKeyFrame();
-                 new_keyframe_ = true;
-
                 // Pre-process the RGB-D frame.
                 shared_ptr<Image<u16>> final_cpu_depth_map;
                 mpSystem->PreprocessFrame(index, &(mpSystem->final_depth_buffer_), &final_cpu_depth_map);
@@ -503,6 +531,34 @@ void Tracking::Track(const bool& force_keyframe)
                                final_cpu_depth_map,
                                *(mpSystem->final_depth_buffer_));
 
+                cv::Mat_<u8> gray_image;
+
+
+
+                // If bundle adjustment is running in parallel, place the keyframe
+                // in a queue from which it will be added later.
+                mpSystem->direct_ba_->Lock();
+
+                cudaEvent_t keyframe_event;
+                cudaEventCreate(&keyframe_event, cudaEventDisableTiming);
+                cudaEventRecord(keyframe_event,  mpSystem->stream_);
+                mpSystem->queued_keyframes_events_.push_back(keyframe_event);
+                mpSystem->queued_keyframes_.push_back(new_keyframe);
+                mpSystem->queued_keyframes_last_kf_tr_this_kf_.push_back(
+                        mpSystem->base_kf_tr_frame_);
+
+                // Also queue keyframe image data for loop detection.
+                mpSystem->queued_keyframe_gray_images_.push_back(gray_image);
+                mpSystem->queued_keyframe_depth_images_.push_back( mpSystem->config_.parallel_loop_detection ? nullptr : depth_image);
+
+
+                mpSystem->direct_ba_->Unlock();
+
+
+                // reset base_kf_tr_frame_ = identity()
+                mpSystem->base_kf_tr_frame_ = SE3f();
+
+
                 // If surfel updates are not done within BA, we always have to
                 // manually create new surfels for new keyframes.
                 if (!mpSystem->config_.do_surfel_updates) {
@@ -516,6 +572,10 @@ void Tracking::Track(const bool& force_keyframe)
                 if (mpSystem->config_.target_frame_rate > 0 || mpSystem->config_.parallel_ba) {
                     mpSystem->direct_ba_->IncreaseBAIterationCount();
                 }
+
+                CreateNewKeyFrame();
+                new_keyframe_ = true;
+
 
             }
                
@@ -569,18 +629,18 @@ void Tracking::Track(const bool& force_keyframe)
 }
 
 
-void Tracking::StereoInitialization()
+SparseKeyFrame* Tracking::StereoInitialization()
 {
+    SparseKeyFrame* pKFini = NULL;
     if(mCurrentFrame.N>500)
     {
         // Set Frame pose to the origin
         mCurrentFrame.SetPose(cv::Mat::eye(4,4,CV_32F));
 
         // Create KeyFrame
-        SparseKeyFrame* pKFini = new SparseKeyFrame(mCurrentFrame,mpMap,mpKeyFrameDB);
+         pKFini = new SparseKeyFrame(mCurrentFrame,mpMap,mpKeyFrameDB);
 
-        // Insert KeyFrame in the map
-        mpMap->AddKeyFrame(pKFini);
+
 
         // Create MapPoints and asscoiate to KeyFrame
         for(int i=0; i<mCurrentFrame.N;i++)
@@ -620,6 +680,7 @@ void Tracking::StereoInitialization()
 
         mState=OK;
     }
+    return pKFini;
 }
 
 

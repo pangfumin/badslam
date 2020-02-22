@@ -118,7 +118,7 @@ protected:
     void Track(const bool& force_keyframe);
 
     // Map initialization for stereo and RGB-D
-    void StereoInitialization();
+    SparseKeyFrame* StereoInitialization();
 
 
     void CheckReplacedInLastFrame();
