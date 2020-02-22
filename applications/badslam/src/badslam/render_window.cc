@@ -325,7 +325,8 @@ void BadSlamRenderWindow::Render() {
   
   // Camera frustum rendering.
   if (render_keyframes_) {
-    RenderCameraFrustums();
+
+    RenderCameraFrustums(keyframe_rgb_[0],keyframe_rgb_[1],keyframe_rgb_[2]);
   }
   if (render_current_frame_frustum_ && current_frame_pose_set_) {
     RenderCurrentFrameFrustum();
@@ -390,9 +391,9 @@ void BadSlamRenderWindow::RenderPointSplats() {
   }
 }
 
-void BadSlamRenderWindow::RenderCameraFrustums() {
+void BadSlamRenderWindow::RenderCameraFrustums(const float& r, const float& g, const float& b ) {
   constant_color_program_.UseProgram();
-  constant_color_program_.SetUniform3f(constant_color_u_constant_color_location_, 0.1f, 0.1f, 0.1f);
+  constant_color_program_.SetUniform3f(constant_color_u_constant_color_location_, r, g, b);
   
   glLineWidth(2);
   
@@ -1084,6 +1085,11 @@ void BadSlamRenderWindow::SetKeyframePosesNoLock(vector<Mat4f>&& global_T_keyfra
   global_T_keyframe_ = std::move(global_T_keyframe);
   keyframe_ids_ = std::move(keyframe_ids);
 }
+
+void BadSlamRenderWindow::SetKeyframePosesColorNoLock(const Vec3f& rgb) {
+    keyframe_rgb_ = rgb;
+}
+
 
 void BadSlamRenderWindow::SetQueuedKeyframePosesNoLock(vector<Mat4f>&& global_T_keyframe, vector<int>&& keyframe_ids) {
   queued_global_T_keyframe_ = std::move(global_T_keyframe);

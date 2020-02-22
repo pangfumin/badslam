@@ -223,16 +223,7 @@ void LocalMapping::RunOneStep() {
     // BoW conversion and insertion in Map
     ProcessNewKeyFrame();
 
-//    const vis::Image<vis::Vec3u8>* rgb_image =
-//      bad_slam_->rgbd_video_->color_frame_mutable(mpCurrentKeyFrame->mnFrameId)->GetImage().get();
-//    cv::Mat imRGB = const_cast<vis::Image<vis::Vec3u8>*>(rgb_image)->WrapInCVMat(CV_8UC3).clone();
-//    cv::cvtColor(imRGB, imRGB, CV_BGR2RGB);
-//
-//    const vis::Image<vis::u16>* depth_image =
-//      bad_slam_->rgbd_video_->depth_frame_mutable(mpCurrentKeyFrame->mnFrameId)->GetImage().get();
-//    cv::Mat imD = const_cast<vis::Image<vis::u16>*>(depth_image)->WrapInCVMat(CV_16UC1).clone();
-//
-//
+
 
     // Check recent MapPoints
     MapPointCulling();

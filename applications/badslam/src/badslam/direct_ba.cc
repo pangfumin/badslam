@@ -692,9 +692,10 @@ void DirectBA::UpdateBAVisualization(cudaStream_t stream) {
     keyframe_poses.push_back(keyframes_[i]->global_T_frame().matrix());
     keyframe_ids.push_back(keyframes_[i]->id());
   }
-  
-  render_window_->SetKeyframePosesNoLock(std::move(keyframe_poses), std::move(keyframe_ids));
-  
+
+    render_window_->SetKeyframePosesColorNoLock(Vec3f(0.6,0.0,0.3));
+    render_window_->SetKeyframePosesNoLock(std::move(keyframe_poses), std::move(keyframe_ids));
+
   Unlock();
   
   cudaStreamSynchronize(stream);

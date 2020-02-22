@@ -126,6 +126,7 @@ class BadSlamRenderWindow : public RenderWindowCallbacks {
   // Updates the keyframe poses. The render mutex must be locked already.
   void SetKeyframePosesNoLock(
       vector<Mat4f>&& global_T_keyframe, vector<int>&& keyframe_ids);
+  void SetKeyframePosesColorNoLock(const Vec3f& rgb);
   
   // Updates the keyframe poses. The render mutex must be locked already.
   void SetQueuedKeyframePosesNoLock(
@@ -217,7 +218,7 @@ class BadSlamRenderWindow : public RenderWindowCallbacks {
  private:
   void RenderPointSplats();
   void RenderSparseKeypoints();
-  void RenderCameraFrustums();
+  void RenderCameraFrustums(const float& r, const float& g, const float& b);
   void RenderCurrentFrameFrustum();
   void RenderCurrentFrameCloud();
   void RenderGroundTruthTrajectory();
@@ -298,6 +299,7 @@ class BadSlamRenderWindow : public RenderWindowCallbacks {
   // Keyframes.
   vector<Mat4f> global_T_keyframe_;
   vector<int> keyframe_ids_;
+  Vec3f keyframe_rgb_;
   vector<Mat4f> queued_global_T_keyframe_;
   vector<int> queued_keyframe_ids_;
   

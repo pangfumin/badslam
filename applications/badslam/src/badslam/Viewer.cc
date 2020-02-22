@@ -113,6 +113,7 @@ void Viewer::Run()
     }
     
     mpSystem->render_window_->SetKeyframePosesNoLock(std::move(keyframe_poses), std::move(keyframe_ids));
+    mpSystem->render_window_->SetKeyframePosesColorNoLock(Vec3f(0.1,0.6,0.3));
 
 
     render_mutex_lock.unlock();
