@@ -292,6 +292,7 @@ public:
     // Create a keyframe from the given video frame and returns it. Normally, this
     // function does not need to be called externally.
     shared_ptr<Keyframe> CreateKeyframe(
+            SparseKeyFrame* sparse_keyframe,
             int frame_index,
             const Image<Vec3u8>* rgb_image,
             const shared_ptr<Image<u16>>& depth_image,

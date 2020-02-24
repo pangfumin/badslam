@@ -29,10 +29,13 @@
 #include "badslam/keyframe.h"
 
 #include "badslam/surfel_projection.h"
+#include "badslam/SparseKeyFrame.h"
+
 
 namespace vis {
 
 Keyframe::Keyframe(
+
     cudaStream_t stream,
     u32 frame_index,
     float min_depth,
@@ -43,7 +46,9 @@ Keyframe::Keyframe(
     const CUDABuffer<uchar4>& color_buffer,
     const ImageFramePtr<u16, SE3f>& depth_frame,
     const ImageFramePtr<Vec3u8, SE3f>& color_frame)
-    : frame_index_(frame_index),
+
+    :
+    frame_index_(frame_index),
       last_active_in_ba_iteration_(-1),
       last_covis_in_ba_iteration_(-1),
       min_depth_(min_depth),
@@ -78,83 +83,84 @@ Keyframe::Keyframe(
   set_frame_T_global(frame_T_global());
 }
 
-Keyframe:: Keyframe(
-    cudaStream_t stream,
-    u32 frame_index,
-    const DepthParameters& depth_params,
-    const PinholeCamera4f& depth_camera,
-    const Image<u16>& depth_image,
-    const Image<Vec3u8>& color_image,
-    const SE3f& global_tr_frame)
-    : frame_index_(frame_index),
-      last_active_in_ba_iteration_(-1),
-      last_covis_in_ba_iteration_(-1),
-      depth_buffer_(depth_image.height(), depth_image.width()),
-      normals_buffer_(depth_image.height(), depth_image.width()),
-      radius_buffer_(depth_image.height(), depth_image.width()),
-      color_buffer_(color_image.height(), color_image.width()) {
-  // Perform color image preprocessing.
-  CUDABuffer<uchar3> rgb_buffer(color_image.height(), color_image.width());
-  rgb_buffer.UploadAsync(stream, reinterpret_cast<const Image<uchar3>&>(color_image));
-  ComputeBrightnessCUDA(
-      stream,
-      rgb_buffer.ToCUDA(),
-      &color_buffer_.ToCUDA());
-  color_buffer_.CreateTextureObject(
-      cudaAddressModeClamp,
-      cudaAddressModeClamp,
-      cudaFilterModeLinear,
-      cudaReadModeNormalizedFloat,
-      /*use_normalized_coordinates*/ false,
-      &color_texture_);
-  
-  // Perform depth image preprocessing.
-  CUDABuffer<u16> depth_buffer(depth_image.height(), depth_image.width());
-  depth_buffer_.UploadAsync(stream, depth_image);
-  
-  ComputeNormalsCUDA(
-      stream,
-      CreatePixelCenterUnprojector(depth_camera),
-      depth_params,
-      depth_buffer_.ToCUDA(),
-      &depth_buffer.ToCUDA(),
-      &normals_buffer_.ToCUDA());
-  
-  CUDABufferPtr<float> min_max_depth_init_buffer_;
-  CUDABufferPtr<float> min_max_depth_result_buffer_;
-  ComputeMinMaxDepthCUDA_InitializeBuffers(
-      &min_max_depth_init_buffer_,
-      &min_max_depth_result_buffer_);
-  
-  ComputePointRadiiAndRemoveIsolatedPixelsCUDA(
-      stream,
-      CreatePixelCenterUnprojector(depth_camera),
-      depth_params.raw_to_float_depth,
-      depth_buffer.ToCUDA(),
-      &radius_buffer_.ToCUDA(),
-      &depth_buffer_.ToCUDA());
-  
-  ComputeMinMaxDepthCUDA(
-      stream,
-      depth_buffer.ToCUDA(),
-      depth_params.raw_to_float_depth,
-      min_max_depth_init_buffer_->ToCUDA(),
-      &min_max_depth_result_buffer_->ToCUDA(),
-      &min_depth_,
-      &max_depth_);
-  
-  // Create new ImageFramePtr for the CPU data.
-  // NOTE: We do not actually store the images in these frames. This could be
-  //       done such that it would be possible to clear the GPU buffers if
-  //       GPU memory needs to be freed, and be able to re-create them
-  //       afterwards from the CPU data if they are needed again.
-  depth_frame_.reset(new ImageFrame<u16, SE3f>());
-  color_frame_.reset(new ImageFrame<Vec3u8, SE3f>());
-  
-  // Make sure that any derived transformations are cached
-  set_global_T_frame(global_tr_frame);
-  
-  activation_ = Activation::kActive;
-}
+//Keyframe:: Keyframe(SparseKeyframe * sparseKeyframe,
+//    cudaStream_t stream,
+//    u32 frame_index,
+//    const DepthParameters& depth_params,
+//    const PinholeCamera4f& depth_camera,
+//    const Image<u16>& depth_image,
+//    const Image<Vec3u8>& color_image,
+//    const SE3f& global_tr_frame)
+//    : sparse_keyframe_(sparseKeyframe),
+//      frame_index_(frame_index),
+//      last_active_in_ba_iteration_(-1),
+//      last_covis_in_ba_iteration_(-1),
+//      depth_buffer_(depth_image.height(), depth_image.width()),
+//      normals_buffer_(depth_image.height(), depth_image.width()),
+//      radius_buffer_(depth_image.height(), depth_image.width()),
+//      color_buffer_(color_image.height(), color_image.width()) {
+//  // Perform color image preprocessing.
+//  CUDABuffer<uchar3> rgb_buffer(color_image.height(), color_image.width());
+//  rgb_buffer.UploadAsync(stream, reinterpret_cast<const Image<uchar3>&>(color_image));
+//  ComputeBrightnessCUDA(
+//      stream,
+//      rgb_buffer.ToCUDA(),
+//      &color_buffer_.ToCUDA());
+//  color_buffer_.CreateTextureObject(
+//      cudaAddressModeClamp,
+//      cudaAddressModeClamp,
+//      cudaFilterModeLinear,
+//      cudaReadModeNormalizedFloat,
+//      /*use_normalized_coordinates*/ false,
+//      &color_texture_);
+//
+//  // Perform depth image preprocessing.
+//  CUDABuffer<u16> depth_buffer(depth_image.height(), depth_image.width());
+//  depth_buffer_.UploadAsync(stream, depth_image);
+//
+//  ComputeNormalsCUDA(
+//      stream,
+//      CreatePixelCenterUnprojector(depth_camera),
+//      depth_params,
+//      depth_buffer_.ToCUDA(),
+//      &depth_buffer.ToCUDA(),
+//      &normals_buffer_.ToCUDA());
+//
+//  CUDABufferPtr<float> min_max_depth_init_buffer_;
+//  CUDABufferPtr<float> min_max_depth_result_buffer_;
+//  ComputeMinMaxDepthCUDA_InitializeBuffers(
+//      &min_max_depth_init_buffer_,
+//      &min_max_depth_result_buffer_);
+//
+//  ComputePointRadiiAndRemoveIsolatedPixelsCUDA(
+//      stream,
+//      CreatePixelCenterUnprojector(depth_camera),
+//      depth_params.raw_to_float_depth,
+//      depth_buffer.ToCUDA(),
+//      &radius_buffer_.ToCUDA(),
+//      &depth_buffer_.ToCUDA());
+//
+//  ComputeMinMaxDepthCUDA(
+//      stream,
+//      depth_buffer.ToCUDA(),
+//      depth_params.raw_to_float_depth,
+//      min_max_depth_init_buffer_->ToCUDA(),
+//      &min_max_depth_result_buffer_->ToCUDA(),
+//      &min_depth_,
+//      &max_depth_);
+//
+//  // Create new ImageFramePtr for the CPU data.
+//  // NOTE: We do not actually store the images in these frames. This could be
+//  //       done such that it would be possible to clear the GPU buffers if
+//  //       GPU memory needs to be freed, and be able to re-create them
+//  //       afterwards from the CPU data if they are needed again.
+//  depth_frame_.reset(new ImageFrame<u16, SE3f>());
+//  color_frame_.reset(new ImageFrame<Vec3u8, SE3f>());
+//
+//  // Make sure that any derived transformations are cached
+//  set_global_T_frame(global_tr_frame);
+//
+//  activation_ = Activation::kActive;
+//}
 
 }

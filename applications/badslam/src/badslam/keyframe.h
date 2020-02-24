@@ -43,6 +43,7 @@
 
 namespace vis {
 
+
 // Represents a keyframe which stores the measured (preprocessed) depth image,
 // as well as a normal and radius image derived from it. Furthermore, the
 // measured color image is stored, and the current estimate for the keyframe's
@@ -82,22 +83,22 @@ class Keyframe {
       const ImageFramePtr<u16, SE3f>& depth_frame,
       const ImageFramePtr<Vec3u8, SE3f>& color_frame);
   
-  // Creates a keyframe from depth and color data. Derives the normal and radius
-  // data from the depth image. This function is slow (since it involves
-  // temporary GPU memory allocations) and thus should not be used for
-  // real-time functionality, but is provided for convenience (e.g., for testing).
-  // raw_to_float_depth is the factor which is applied to values of depth_image
-  // to obtain metric depths in meters. Notice that this constructor does not
-  // apply the full preprocessing pipeline to the depth images that BAD SLAM
-  // would apply (e.g., it does not apply bilateral filtering to the depth).
-  Keyframe(
-      cudaStream_t stream,
-      u32 frame_index,
-      const DepthParameters& depth_params,
-      const PinholeCamera4f& depth_camera,
-      const Image<u16>& depth_image,
-      const Image<Vec3u8>& color_image,
-      const SE3f& global_tr_frame);
+//  // Creates a keyframe from depth and color data. Derives the normal and radius
+//  // data from the depth image. This function is slow (since it involves
+//  // temporary GPU memory allocations) and thus should not be used for
+//  // real-time functionality, but is provided for convenience (e.g., for testing).
+//  // raw_to_float_depth is the factor which is applied to values of depth_image
+//  // to obtain metric depths in meters. Notice that this constructor does not
+//  // apply the full preprocessing pipeline to the depth images that BAD SLAM
+//  // would apply (e.g., it does not apply bilateral filtering to the depth).
+//  Keyframe(SparseKeyframe * sparseKeyframe,
+//      cudaStream_t stream,
+//      u32 frame_index,
+//      const DepthParameters& depth_params,
+//      const PinholeCamera4f& depth_camera,
+//      const Image<u16>& depth_image,
+//      const Image<Vec3u8>& color_image,
+//      const SE3f& global_tr_frame);
   
   inline ~Keyframe() {
     cudaDestroyTextureObject(color_texture_);
@@ -206,8 +207,11 @@ class Keyframe {
   inline cudaTextureObject_t color_texture() const {
     return color_texture_;
   }
-  
- private:
+
+
+
+private:
+
   int id_;
   u32 frame_index_;
   int last_active_in_ba_iteration_;

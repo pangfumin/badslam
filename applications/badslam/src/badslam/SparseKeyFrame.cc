@@ -19,6 +19,7 @@
 */
 
 #include "SparseKeyFrame.h"
+#include "keyframe.h"
 #include "Converter.h"
 #include "ORBmatcher.h"
 #include<mutex>

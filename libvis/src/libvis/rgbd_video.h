@@ -90,9 +90,9 @@ class RGBDVideo {
   shared_ptr<Camera> depth_camera_;
   DepthFramesVector depth_frames_;
   std::vector<Time> depth_timestamps_;
-    std::vector<SE3f> groundtruth_pose_frames_;
+  std::vector<SE3f> groundtruth_pose_frames_;
 
-    std::vector<Imu> imu_frames_;
+  std::vector<Imu> imu_frames_;
   std::vector<Time> imu_timestamps_;
 };
 

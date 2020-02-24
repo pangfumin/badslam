@@ -30,6 +30,7 @@
 #include "KeyFrameDatabase.h"
 
 #include <mutex>
+#include <memory>
 
 
 namespace vis
@@ -39,6 +40,7 @@ class Map;
 class MapPoint;
 class Frame;
 class KeyFrameDatabase;
+class Keyframe;
 
 class SparseKeyFrame
 {
@@ -189,6 +191,9 @@ public:
     const cv::Mat mK;
 
     // The following variables need to be accessed trough a mutex to be thread safe.
+
+    std::shared_ptr<Keyframe> dense_keyframe_;
+
 protected:
 
     // SE3 Pose and camera center

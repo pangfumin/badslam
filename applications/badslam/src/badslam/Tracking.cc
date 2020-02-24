@@ -267,7 +267,9 @@ void Tracking::Track(const bool& force_keyframe)
         mpSystem->rgbd_video_->color_frame_mutable(mCurrentFrame.mnId)->SetGlobalTFrame(new_global_T_frame);
         mpSystem->last_frame_index_ = mCurrentFrame.mnId;
         mpSystem->GetLocalMapper()->Unlock();
-        shared_ptr<Keyframe> new_keyframe = mpSystem->CreateKeyframe(index,
+        shared_ptr<Keyframe> new_keyframe = mpSystem->CreateKeyframe(
+                first_keyframe,
+                index,
                        rgb_image,
                        final_cpu_depth_map,
                        *(mpSystem->final_depth_buffer_));
@@ -319,6 +321,7 @@ void Tracking::Track(const bool& force_keyframe)
         cudaStreamSynchronize(mpSystem->stream_);
 
         // Insert KeyFrame in the map
+        first_keyframe->dense_keyframe_ = new_keyframe;
         mpMap->AddKeyFrame(first_keyframe);
     }
     else
@@ -524,74 +527,147 @@ void Tracking::Track(const bool& force_keyframe)
 
             // Check if we need to insert a new keyframe
             if(force_keyframe || NeedNewKeyFrame()) {
-                // Pre-process the RGB-D frame.
-                shared_ptr<Image<u16>> final_cpu_depth_map;
-                mpSystem->PreprocessFrame(index, &(mpSystem->final_depth_buffer_), &final_cpu_depth_map);
+
+                if(mpLocalMapper->SetNotStop(true)) {
+
+                    SparseKeyFrame *pKF = new SparseKeyFrame(mCurrentFrame, mpMap, mpKeyFrameDB);
+
+                    mpReferenceKF = pKF;
+                    mCurrentFrame.mpReferenceKF = pKF;
+
+                    if (mSensor != System::MONOCULAR) {
+                        mCurrentFrame.UpdatePoseMatrices();
+
+                        // We sort points by the measured depth by the stereo/RGBD sensor.
+                        // We create all those MapPoints whose depth < mThDepth.
+                        // If there are less than 100 close points we create the 100 closest.
+                        vector<pair<float, int> > vDepthIdx;
+                        vDepthIdx.reserve(mCurrentFrame.N);
+                        for (int i = 0; i < mCurrentFrame.N; i++) {
+                            float z = mCurrentFrame.mvDepth[i];
+                            if (z > 0) {
+                                vDepthIdx.push_back(make_pair(z, i));
+                            }
+                        }
+
+                        if (!vDepthIdx.empty()) {
+                            sort(vDepthIdx.begin(), vDepthIdx.end());
+
+                            int nPoints = 0;
+                            for (size_t j = 0; j < vDepthIdx.size(); j++) {
+                                int i = vDepthIdx[j].second;
+
+                                bool bCreateNew = false;
+
+                                MapPoint *pMP = mCurrentFrame.mvpMapPoints[i];
+                                if (!pMP)
+                                    bCreateNew = true;
+                                else if (pMP->Observations() < 1) {
+                                    bCreateNew = true;
+                                    mCurrentFrame.mvpMapPoints[i] = static_cast<MapPoint *>(NULL);
+                                }
+
+                                if (bCreateNew) {
+                                    cv::Mat x3D = mCurrentFrame.UnprojectStereo(i);
+                                    MapPoint *pNewMP = new MapPoint(x3D, pKF, mpMap);
+                                    pNewMP->AddObservation(pKF, i);
+                                    pKF->AddMapPoint(pNewMP, i);
+                                    pNewMP->ComputeDistinctiveDescriptors();
+                                    pNewMP->UpdateNormalAndDepth();
+                                    mpMap->AddMapPoint(pNewMP);
+
+                                    mCurrentFrame.mvpMapPoints[i] = pNewMP;
+                                    nPoints++;
+                                } else {
+                                    nPoints++;
+                                }
+
+                                if (vDepthIdx[j].first > mThDepth && nPoints > 100)
+                                    break;
+                            }
+                        }
+                    }
 
 
-                mpSystem->pose_estimated_ = false;
-                if (mpSystem->config_.estimate_poses && mpSystem->base_kf_) {
-                    mpSystem->RunOdometry(index,base_T_frame_estimate, new_global_T_frame );
-                    mpSystem->pose_estimated_ = true;
+
+                    // Pre-process the RGB-D frame.
+                    shared_ptr<Image<u16>> final_cpu_depth_map;
+                    mpSystem->PreprocessFrame(index, &(mpSystem->final_depth_buffer_), &final_cpu_depth_map);
+
+
+                    mpSystem->pose_estimated_ = false;
+                    if (mpSystem->config_.estimate_poses && mpSystem->base_kf_) {
+                        mpSystem->RunOdometry(index, base_T_frame_estimate, new_global_T_frame);
+                        mpSystem->pose_estimated_ = true;
+                    }
+
+
+                    shared_ptr<Keyframe> new_keyframe = mpSystem->CreateKeyframe(pKF,
+                            index,
+                             rgb_image,
+                             final_cpu_depth_map,
+                             *(mpSystem->final_depth_buffer_));
+
+                    cv::Mat_<u8> gray_image;
+
+
+
+                    // If bundle adjustment is running in parallel, place the keyframe
+                    // in a queue from which it will be added later.
+                    mpSystem->GetLocalMapper()->Lock();
+                    ParallelBAOptions options;
+                    options.optimize_depth_intrinsics = false;
+                    options.optimize_color_intrinsics = false;
+                    options.do_surfel_updates = true;
+                    options.optimize_poses = true;
+                    options.optimize_geometry = true;
+
+                    mpSystem->parallel_ba_iteration_queue_.push_back(options);
+
+                    cudaEvent_t keyframe_event;
+                    cudaEventCreate(&keyframe_event, cudaEventDisableTiming);
+                    cudaEventRecord(keyframe_event, mpSystem->stream_);
+                    mpSystem->queued_keyframes_events_.push_back(keyframe_event);
+                    mpSystem->queued_keyframes_.push_back(new_keyframe);
+                    mpSystem->queued_keyframes_last_kf_tr_this_kf_.push_back(
+                            mpSystem->base_kf_tr_frame_);
+
+                    // Also queue keyframe image data for loop detection.
+                    mpSystem->queued_keyframe_gray_images_.push_back(gray_image);
+
+
+                    mpSystem->GetLocalMapper()->Unlock();
+
+
+                    // reset base_kf_tr_frame_ = identity()
+                    mpSystem->base_kf_tr_frame_ = SE3f();
+
+
+                    // If surfel updates are not done within BA, we always have to
+                    // manually create new surfels for new keyframes.
+                    if (!mpSystem->config_.do_surfel_updates) {
+                        mpSystem->GetLocalMapper()->CreateSurfelsForKeyframe(mpSystem->stream_, true, new_keyframe);
+                    }
+
+                    // After every new keyframe, plan some bundle adjustment iterations.
+                    mpSystem->num_planned_ba_iterations_ += mpSystem->config_.max_num_ba_iterations_per_keyframe;
+
+                    // Trigger surfel updates within the next BA iteration.
+                    if (mpSystem->config_.target_frame_rate > 0 || mpSystem->config_.parallel_ba) {
+                        mpSystem->GetLocalMapper()->IncreaseBAIterationCount();
+                    }
+
+
+                    pKF->dense_keyframe_ = new_keyframe;
+                    mpLocalMapper->InsertKeyFrame(pKF);
+
+                    mpLocalMapper->SetNotStop(false);
+
+                    mnLastKeyFrameId = mCurrentFrame.mnId;
+                    mpLastKeyFrame = pKF;
+
+                    new_keyframe_ = true;
                 }
-
-
-                shared_ptr<Keyframe> new_keyframe = mpSystem->CreateKeyframe(index,
-                               rgb_image,
-                               final_cpu_depth_map,
-                               *(mpSystem->final_depth_buffer_));
-
-                cv::Mat_<u8> gray_image;
-
-
-
-                // If bundle adjustment is running in parallel, place the keyframe
-                // in a queue from which it will be added later.
-                mpSystem->GetLocalMapper()->Lock();
-                ParallelBAOptions options;
-                options.optimize_depth_intrinsics = false;
-                options.optimize_color_intrinsics = false;
-                options.do_surfel_updates = true;
-                options.optimize_poses = true;
-                options.optimize_geometry = true;
-
-                mpSystem->parallel_ba_iteration_queue_.push_back(options);
-
-                cudaEvent_t keyframe_event;
-                cudaEventCreate(&keyframe_event, cudaEventDisableTiming);
-                cudaEventRecord(keyframe_event,  mpSystem->stream_);
-                mpSystem->queued_keyframes_events_.push_back(keyframe_event);
-                mpSystem->queued_keyframes_.push_back(new_keyframe);
-                mpSystem->queued_keyframes_last_kf_tr_this_kf_.push_back(
-                        mpSystem->base_kf_tr_frame_);
-
-                // Also queue keyframe image data for loop detection.
-                mpSystem->queued_keyframe_gray_images_.push_back(gray_image);
-
-
-                mpSystem->GetLocalMapper()->Unlock();
-
-
-                // reset base_kf_tr_frame_ = identity()
-                mpSystem->base_kf_tr_frame_ = SE3f();
-
-
-                // If surfel updates are not done within BA, we always have to
-                // manually create new surfels for new keyframes.
-                if (!mpSystem->config_.do_surfel_updates) {
-                    mpSystem->GetLocalMapper()->CreateSurfelsForKeyframe(mpSystem->stream_, true, new_keyframe);
-                }
-
-                // After every new keyframe, plan some bundle adjustment iterations.
-                mpSystem->num_planned_ba_iterations_ += mpSystem->config_.max_num_ba_iterations_per_keyframe;
-
-                // Trigger surfel updates within the next BA iteration.
-                if (mpSystem->config_.target_frame_rate > 0 || mpSystem->config_.parallel_ba) {
-                    mpSystem->GetLocalMapper()->IncreaseBAIterationCount();
-                }
-
-                CreateNewKeyFrame();
-                new_keyframe_ = true;
 
 
             }
@@ -1026,85 +1102,7 @@ bool Tracking::NeedNewKeyFrame()
         return false;
 }
 
-void Tracking::CreateNewKeyFrame()
-{
-    if(!mpLocalMapper->SetNotStop(true))
-        return;
 
-    SparseKeyFrame* pKF = new SparseKeyFrame(mCurrentFrame,mpMap,mpKeyFrameDB);
-
-    mpReferenceKF = pKF;
-    mCurrentFrame.mpReferenceKF = pKF;
-
-    if(mSensor!=System::MONOCULAR)
-    {
-        mCurrentFrame.UpdatePoseMatrices();
-
-        // We sort points by the measured depth by the stereo/RGBD sensor.
-        // We create all those MapPoints whose depth < mThDepth.
-        // If there are less than 100 close points we create the 100 closest.
-        vector<pair<float,int> > vDepthIdx;
-        vDepthIdx.reserve(mCurrentFrame.N);
-        for(int i=0; i<mCurrentFrame.N; i++)
-        {
-            float z = mCurrentFrame.mvDepth[i];
-            if(z>0)
-            {
-                vDepthIdx.push_back(make_pair(z,i));
-            }
-        }
-
-        if(!vDepthIdx.empty())
-        {
-            sort(vDepthIdx.begin(),vDepthIdx.end());
-
-            int nPoints = 0;
-            for(size_t j=0; j<vDepthIdx.size();j++)
-            {
-                int i = vDepthIdx[j].second;
-
-                bool bCreateNew = false;
-
-                MapPoint* pMP = mCurrentFrame.mvpMapPoints[i];
-                if(!pMP)
-                    bCreateNew = true;
-                else if(pMP->Observations()<1)
-                {
-                    bCreateNew = true;
-                    mCurrentFrame.mvpMapPoints[i] = static_cast<MapPoint*>(NULL);
-                }
-
-                if(bCreateNew)
-                {
-                    cv::Mat x3D = mCurrentFrame.UnprojectStereo(i);
-                    MapPoint* pNewMP = new MapPoint(x3D,pKF,mpMap);
-                    pNewMP->AddObservation(pKF,i);
-                    pKF->AddMapPoint(pNewMP,i);
-                    pNewMP->ComputeDistinctiveDescriptors();
-                    pNewMP->UpdateNormalAndDepth();
-                    mpMap->AddMapPoint(pNewMP);
-
-                    mCurrentFrame.mvpMapPoints[i]=pNewMP;
-                    nPoints++;
-                }
-                else
-                {
-                    nPoints++;
-                }
-
-                if(vDepthIdx[j].first>mThDepth && nPoints>100)
-                    break;
-            }
-        }
-    }
-
-    mpLocalMapper->InsertKeyFrame(pKF);
-
-    mpLocalMapper->SetNotStop(false);
-
-    mnLastKeyFrameId = mCurrentFrame.mnId;
-    mpLastKeyFrame = pKF;
-}
 
 void Tracking::SearchLocalPoints()
 {

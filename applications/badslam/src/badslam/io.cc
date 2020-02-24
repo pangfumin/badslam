@@ -429,7 +429,7 @@ bool LoadState(
           &final_depth_buffer,
           &final_cpu_depth_map);
       
-      shared_ptr<Keyframe> new_keyframe = slam->CreateKeyframe(
+      shared_ptr<Keyframe> new_keyframe = slam->CreateKeyframe(NULL,
           frame_index,
           rgb_image,
           final_cpu_depth_map,
@@ -513,7 +513,7 @@ bool LoadState(
         &final_depth_buffer,
         &final_cpu_depth_map);
     
-    queued_keyframes[i] = slam->CreateKeyframe(
+    queued_keyframes[i] = slam->CreateKeyframe(NULL,
         frame_index,
         rgb_image,
         final_cpu_depth_map,

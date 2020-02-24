@@ -1026,7 +1026,7 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
         cudaEventRecord(odometry_post_event_, stream_);
     }
 
-    shared_ptr<Keyframe> System::CreateKeyframe(
+    shared_ptr<Keyframe> System::CreateKeyframe(SparseKeyFrame* sparse_keyframe,
             int frame_index,
             const Image<Vec3u8>* rgb_image,
             const shared_ptr<Image<u16>>& depth_image,
