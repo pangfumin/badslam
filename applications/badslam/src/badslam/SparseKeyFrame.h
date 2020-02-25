@@ -37,6 +37,16 @@
 namespace vis
 {
 
+    // Parallelism.
+    struct ParallelBAOptions {
+        bool optimize_depth_intrinsics;
+        bool optimize_color_intrinsics;
+        bool do_surfel_updates;
+        bool optimize_poses;
+        bool optimize_geometry;
+    };
+
+
 class Map;
 class MapPoint;
 class Frame;
@@ -195,6 +205,11 @@ public:
     // The following variables need to be accessed trough a mutex to be thread safe.
 
     std::shared_ptr<Keyframe> dense_keyframe_;
+    ParallelBAOptions parallel_ba_iteration_;
+
+    cudaEvent_t keyframe_event_;
+
+    cv::Mat_<u8> keyframe_gray_image_;
 
 protected:
 

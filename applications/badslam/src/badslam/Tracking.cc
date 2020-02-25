@@ -290,17 +290,15 @@ void Tracking::Track(const bool& force_keyframe)
         options.optimize_geometry = true;
 
 
-        mpSystem->parallel_ba_iteration_queue_.push_back(options);
 
 
         cudaEvent_t keyframe_event;
         cudaEventCreate(&keyframe_event, cudaEventDisableTiming);
         cudaEventRecord(keyframe_event,  mpSystem->stream_);
-        mpSystem->queued_keyframes_events_.push_back(keyframe_event);
 
-        // Also queue keyframe image data for loop detection.
-        mpSystem->queued_keyframe_gray_images_.push_back(gray_image);
-
+        first_keyframe->parallel_ba_iteration_ = options;
+        first_keyframe->keyframe_event_ = keyframe_event;
+        first_keyframe->keyframe_gray_image_ = gray_image;
 
         mpSystem->GetLocalMapper()->Unlock();
 
@@ -610,19 +608,14 @@ void Tracking::Track(const bool& force_keyframe)
                     options.optimize_poses = true;
                     options.optimize_geometry = true;
 
-                    mpSystem->parallel_ba_iteration_queue_.push_back(options);
 
                     cudaEvent_t keyframe_event;
                     cudaEventCreate(&keyframe_event, cudaEventDisableTiming);
                     cudaEventRecord(keyframe_event, mpSystem->stream_);
-                    mpSystem->queued_keyframes_events_.push_back(keyframe_event);
-//                    mpSystem->queued_keyframes_.push_back(new_keyframe);
-//                    mpSystem->queued_keyframes_last_kf_tr_this_kf_.push_back(
-//                            mpSystem->base_kf_tr_frame_);
 
-                    // Also queue keyframe image data for loop detection.
-                    mpSystem->queued_keyframe_gray_images_.push_back(gray_image);
-
+                    pKF->parallel_ba_iteration_ = options;
+                    pKF->keyframe_event_ = keyframe_event;
+                    pKF->keyframe_gray_image_ = gray_image;
 
                     mpSystem->GetLocalMapper()->Unlock();
 

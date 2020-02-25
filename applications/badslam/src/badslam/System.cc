@@ -338,9 +338,7 @@ void System::Shutdown()
 //        StopBAThreadAndWaitForIt();
 //    }
 
-    for (cudaEvent_t event : queued_keyframes_events_) {
-        cudaEventDestroy(event);
-    }
+
 
     cudaDestroyTextureObject(color_texture_);
 
@@ -781,16 +779,16 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
             const vector<shared_ptr<Image<u16>>>& queued_keyframe_depth_images) {
 //        queued_keyframes_ = queued_keyframes;
 //        queued_keyframes_last_kf_tr_this_kf_ = queued_keyframes_last_kf_tr_this_kf;
-        queued_keyframe_gray_images_ = queued_keyframe_gray_images;
+//        queued_keyframe_gray_images_ = queued_keyframe_gray_images;
 //        queued_keyframe_depth_images_ = queued_keyframe_depth_images;
 
-        for (usize i = 0; i < queued_keyframes_events_.size(); ++ i) {
-            cudaEventDestroy(queued_keyframes_events_[i]);
-        }
-//        queued_keyframes_events_.resize(queued_keyframes_.size());
-        for (usize i = 0; i < queued_keyframes_events_.size(); ++ i) {
-            queued_keyframes_events_[i] = nullptr;
-        }
+//        for (usize i = 0; i < queued_keyframes_events_.size(); ++ i) {
+//            cudaEventDestroy(queued_keyframes_events_[i]);
+//        }
+////        queued_keyframes_events_.resize(queued_keyframes_.size());
+//        for (usize i = 0; i < queued_keyframes_events_.size(); ++ i) {
+//            queued_keyframes_events_[i] = nullptr;
+//        }
     }
 
     void System::AppendQueuedKeyframesToVisualization(

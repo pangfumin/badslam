@@ -120,6 +120,9 @@ public:
         return mlNewKeyFrames.size();
     }
 
+    std::list<SparseKeyFrame*> mlNewKeyFrames;
+
+
 protected:
 
     bool CheckNewKeyFrames();
@@ -155,7 +158,6 @@ protected:
     LoopClosing* mpLoopCloser;
     Tracking* mpTracker;
 
-    std::list<SparseKeyFrame*> mlNewKeyFrames;
 
     SparseKeyFrame* mpCurrentKeyFrame;
 

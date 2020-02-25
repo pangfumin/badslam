@@ -79,14 +79,7 @@ class Keyframe;
 class OpenGLContext;
 template<typename ColorT, typename DepthT> class RGBDVideo;
 
-    // Parallelism.
-    struct ParallelBAOptions {
-        bool optimize_depth_intrinsics;
-        bool optimize_color_intrinsics;
-        bool do_surfel_updates;
-        bool optimize_poses;
-        bool optimize_geometry;
-    };
+
 
 class System
 {
@@ -420,13 +413,6 @@ public:
     PairwiseFrameTrackingBuffers pairwise_tracking_buffers_for_loops_;
     PoseEstimationHelperBuffers pose_estimation_helper_buffers_;
 
-
-
-    vector<ParallelBAOptions> parallel_ba_iteration_queue_;
-
-    vector<cudaEvent_t> queued_keyframes_events_;
-
-    vector<cv::Mat_<u8>> queued_keyframe_gray_images_;
 
     std::atomic<bool> quit_requested_;
     std::atomic<bool> quit_done_;

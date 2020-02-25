@@ -195,6 +195,10 @@ LocalMapping::~LocalMapping() {
     if (gather_convergence_samples_) {
         convergence_samples_file_.close();
     }
+
+    for (auto left_kf : mlNewKeyFrames ) {
+        cudaEventDestroy(left_kf->keyframe_event_);
+    }
 }
 
 void LocalMapping::SetLoopCloser(LoopClosing* pLoopCloser)
@@ -275,9 +279,10 @@ void LocalMapping::RunDenseBAOneStep(cudaStream_t stream) {
 
 
     // Pop item from parallel_ba_iteration_queue_
-    ParallelBAOptions options = mpSystem->parallel_ba_iteration_queue_.front();
-    mpSystem->parallel_ba_iteration_queue_.erase(mpSystem->parallel_ba_iteration_queue_.begin());
+//    ParallelBAOptions options = mpSystem->parallel_ba_iteration_queue_.front();
+//    mpSystem->parallel_ba_iteration_queue_.erase(mpSystem->parallel_ba_iteration_queue_.begin());
 
+    ParallelBAOptions options = mpCurrentKeyFrame->parallel_ba_iteration_;
 //    std::cout << "BAThreadMain: " <<  std::endl;
     // Add any queued keyframes (within the lock).
     bool mutex_locked = true;
@@ -292,14 +297,15 @@ void LocalMapping::RunDenseBAOneStep(cudaStream_t stream) {
         shared_ptr<Keyframe> new_keyframe = mpCurrentKeyFrame->dense_keyframe_;
 
 
-       SE3f T_WC = Converter::toSophusSE3(mpCurrentKeyFrame->GetPoseInverse()).cast<float>();
-            new_keyframe->set_global_T_frame(T_WC);
+        SE3f T_WC = Converter::toSophusSE3(mpCurrentKeyFrame->GetPoseInverse()).cast<float>();
+        new_keyframe->set_global_T_frame(T_WC);
 
-        cv::Mat_<u8> gray_image = mpSystem->queued_keyframe_gray_images_.front();
-        cudaEvent_t keyframe_event =mpSystem-> queued_keyframes_events_.front();
+        cv::Mat_<u8> gray_image = mpCurrentKeyFrame->keyframe_gray_image_;
+//                mpSystem->queued_keyframe_gray_images_.front();
+        cudaEvent_t keyframe_event = mpCurrentKeyFrame->keyframe_event_;
 
-        mpSystem->queued_keyframe_gray_images_.erase(mpSystem->queued_keyframe_gray_images_.begin());
-        mpSystem->queued_keyframes_events_.erase(mpSystem->queued_keyframes_events_.begin());
+//        mpSystem->queued_keyframe_gray_images_.erase(mpSystem->queued_keyframe_gray_images_.begin());
+//        mpSystem->queued_keyframes_events_.erase(mpSystem->queued_keyframes_events_.begin());
 
         // Release lock while performing loop detection.
         lock.unlock();
