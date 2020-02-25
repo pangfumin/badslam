@@ -230,9 +230,11 @@ void LocalMapping::Run(OpenGLContext* opengl_context)
         // Check if there are keyframes in the queue
         if(CheckNewKeyFrames())
         {
-            RunDenseBAOneStep(thread_stream);
+
             RunOneStep();
-//
+            RunDenseBAOneStep(thread_stream);
+
+
         }
         else if(Stop())
         {
@@ -279,32 +281,24 @@ void LocalMapping::RunDenseBAOneStep(cudaStream_t stream) {
 //    std::cout << "BAThreadMain: " <<  std::endl;
     // Add any queued keyframes (within the lock).
     bool mutex_locked = true;
-    if (!mpSystem->queued_keyframes_.empty()) {
+
         if (!mutex_locked) {
             lock.lock();
             mutex_locked = true;
         }
 
+        std::cout <<"mpCurrentKeyFrame->dense_keyframe_: " << mpCurrentKeyFrame->dense_keyframe_->frame_index() << std::endl;
 
-        shared_ptr<Keyframe> new_keyframe = mpSystem->queued_keyframes_.front();
-        const SE3f& last_kf_tr_this_kf = mpSystem->queued_keyframes_last_kf_tr_this_kf_.front();
+        shared_ptr<Keyframe> new_keyframe = mpCurrentKeyFrame->dense_keyframe_;
 
-        // Convert relative to absolute pose
-        if (!this->keyframes().empty()) {
-            new_keyframe->set_global_T_frame(
-                    this->keyframes().back()->global_T_frame() * last_kf_tr_this_kf);
-        }
 
-//        std::cout << "add new keyframe: " <<  std::endl;
-//
+       SE3f T_WC = Converter::toSophusSE3(mpCurrentKeyFrame->GetPoseInverse()).cast<float>();
+            new_keyframe->set_global_T_frame(T_WC);
+
         cv::Mat_<u8> gray_image = mpSystem->queued_keyframe_gray_images_.front();
-        shared_ptr<Image<u16>> depth_image = nullptr ;// = mpSystem->queued_keyframe_depth_images_.front();
         cudaEvent_t keyframe_event =mpSystem-> queued_keyframes_events_.front();
 
-        mpSystem->queued_keyframes_.erase(mpSystem->queued_keyframes_.begin());
-        mpSystem->queued_keyframes_last_kf_tr_this_kf_.erase(mpSystem->queued_keyframes_last_kf_tr_this_kf_.begin());
         mpSystem->queued_keyframe_gray_images_.erase(mpSystem->queued_keyframe_gray_images_.begin());
-//        mpSystem->queued_keyframe_depth_images_.erase(mpSystem->queued_keyframe_depth_images_.begin());
         mpSystem->queued_keyframes_events_.erase(mpSystem->queued_keyframes_events_.begin());
 
         // Release lock while performing loop detection.
@@ -319,8 +313,7 @@ void LocalMapping::RunDenseBAOneStep(cudaStream_t stream) {
         mpSystem->AddKeyframeToBA(stream,
                         new_keyframe,
                         gray_image,
-                        depth_image);
-    }
+                                  nullptr);
     if (mutex_locked) {
         lock.unlock();
     }

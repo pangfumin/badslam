@@ -122,7 +122,6 @@ System::System(const BadSlamConfig& config,
         return;
     }
 
-    base_kf_tr_frame_ = SE3f();
 
 
     // Output welcome message
@@ -499,12 +498,12 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
         vector<Mat4f> keyframe_poses;
         vector<int> keyframe_ids;
 
-        if (ba_thread_) {
-            keyframe_poses.reserve(queued_keyframes_.size());
-            keyframe_ids.reserve(queued_keyframes_.size());
-
-            AppendQueuedKeyframesToVisualization(&keyframe_poses, &keyframe_ids);
-        }
+//        if (ba_thread_) {
+//            keyframe_poses.reserve(queued_keyframes_.size());
+//            keyframe_ids.reserve(queued_keyframes_.size());
+//
+//            AppendQueuedKeyframesToVisualization(&keyframe_poses, &keyframe_ids);
+//        }
 
         PinholeCamera4f depth_camera = mpLocalMapper->depth_camera_no_lock();
 
@@ -780,15 +779,15 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
             const vector<SE3f>& queued_keyframes_last_kf_tr_this_kf,
             const vector<cv::Mat_<u8>>& queued_keyframe_gray_images,
             const vector<shared_ptr<Image<u16>>>& queued_keyframe_depth_images) {
-        queued_keyframes_ = queued_keyframes;
-        queued_keyframes_last_kf_tr_this_kf_ = queued_keyframes_last_kf_tr_this_kf;
+//        queued_keyframes_ = queued_keyframes;
+//        queued_keyframes_last_kf_tr_this_kf_ = queued_keyframes_last_kf_tr_this_kf;
         queued_keyframe_gray_images_ = queued_keyframe_gray_images;
-        queued_keyframe_depth_images_ = queued_keyframe_depth_images;
+//        queued_keyframe_depth_images_ = queued_keyframe_depth_images;
 
         for (usize i = 0; i < queued_keyframes_events_.size(); ++ i) {
             cudaEventDestroy(queued_keyframes_events_[i]);
         }
-        queued_keyframes_events_.resize(queued_keyframes_.size());
+//        queued_keyframes_events_.resize(queued_keyframes_.size());
         for (usize i = 0; i < queued_keyframes_events_.size(); ++ i) {
             queued_keyframes_events_[i] = nullptr;
         }
@@ -804,21 +803,21 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
             last_global_tr_frame = mpLocalMapper->keyframes().back()->global_T_frame();
         }
 
-        for (usize i = 0; i < queued_keyframes_.size(); ++ i) {
-            shared_ptr<Keyframe> new_keyframe = queued_keyframes_[i];
-
-            // Convert relative to absolute pose
-            const SE3f& last_kf_tr_this_kf = queued_keyframes_last_kf_tr_this_kf_[i];
-            if (have_last_global_tr_frame) {
-                last_global_tr_frame = last_global_tr_frame * last_kf_tr_this_kf;
-            } else {
-                last_global_tr_frame = new_keyframe->global_T_frame();
-                have_last_global_tr_frame = true;
-            }
-
-            keyframe_poses->push_back(last_global_tr_frame.matrix());
-            keyframe_ids->push_back(new_keyframe->id());
-        }
+//        for (usize i = 0; i < queued_keyframes_.size(); ++ i) {
+//            shared_ptr<Keyframe> new_keyframe = queued_keyframes_[i];
+//
+//            // Convert relative to absolute pose
+//            const SE3f& last_kf_tr_this_kf = queued_keyframes_last_kf_tr_this_kf_[i];
+//            if (have_last_global_tr_frame) {
+//                last_global_tr_frame = last_global_tr_frame * last_kf_tr_this_kf;
+//            } else {
+//                last_global_tr_frame = new_keyframe->global_T_frame();
+//                have_last_global_tr_frame = true;
+//            }
+//
+//            keyframe_poses->push_back(last_global_tr_frame.matrix());
+//            keyframe_ids->push_back(new_keyframe->id());
+//        }
     }
 
     void System::PreprocessFrame(

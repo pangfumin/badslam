@@ -289,6 +289,7 @@ void Tracking::Track(const bool& force_keyframe)
         options.optimize_poses = true;
         options.optimize_geometry = true;
 
+
         mpSystem->parallel_ba_iteration_queue_.push_back(options);
 
 
@@ -296,20 +297,14 @@ void Tracking::Track(const bool& force_keyframe)
         cudaEventCreate(&keyframe_event, cudaEventDisableTiming);
         cudaEventRecord(keyframe_event,  mpSystem->stream_);
         mpSystem->queued_keyframes_events_.push_back(keyframe_event);
-        mpSystem->queued_keyframes_.push_back(new_keyframe);
-        mpSystem->queued_keyframes_last_kf_tr_this_kf_.push_back(
-                mpSystem->base_kf_tr_frame_);
 
         // Also queue keyframe image data for loop detection.
         mpSystem->queued_keyframe_gray_images_.push_back(gray_image);
-//        mpSystem->queued_keyframe_depth_images_.push_back( mpSystem->config_.parallel_loop_detection ? nullptr : depth_image);
 
 
         mpSystem->GetLocalMapper()->Unlock();
 
 
-        // reset base_kf_tr_frame_ = identity()
-        mpSystem->base_kf_tr_frame_ = SE3f();
 
         // Create surfels from the new keyframe, and / or plan BA iterations.
 
@@ -323,6 +318,7 @@ void Tracking::Track(const bool& force_keyframe)
         // Insert KeyFrame in the map
         first_keyframe->dense_keyframe_ = new_keyframe;
         mpMap->AddKeyFrame(first_keyframe);
+        mpLocalMapper->InsertKeyFrame(first_keyframe);
     }
     else
     {
@@ -517,14 +513,6 @@ void Tracking::Track(const bool& force_keyframe)
             mpSystem->GetLocalMapper()->Unlock();
 
 
-
-
-
-            mpSystem->base_kf_tr_frame_ = base_T_frame_estimate;
-//            mpSystem->base_kf_tr_frame_ = gt_T_CbCf;
-
-
-
             // Check if we need to insert a new keyframe
             if(force_keyframe || NeedNewKeyFrame()) {
 
@@ -628,9 +616,9 @@ void Tracking::Track(const bool& force_keyframe)
                     cudaEventCreate(&keyframe_event, cudaEventDisableTiming);
                     cudaEventRecord(keyframe_event, mpSystem->stream_);
                     mpSystem->queued_keyframes_events_.push_back(keyframe_event);
-                    mpSystem->queued_keyframes_.push_back(new_keyframe);
-                    mpSystem->queued_keyframes_last_kf_tr_this_kf_.push_back(
-                            mpSystem->base_kf_tr_frame_);
+//                    mpSystem->queued_keyframes_.push_back(new_keyframe);
+//                    mpSystem->queued_keyframes_last_kf_tr_this_kf_.push_back(
+//                            mpSystem->base_kf_tr_frame_);
 
                     // Also queue keyframe image data for loop detection.
                     mpSystem->queued_keyframe_gray_images_.push_back(gray_image);
@@ -638,9 +626,6 @@ void Tracking::Track(const bool& force_keyframe)
 
                     mpSystem->GetLocalMapper()->Unlock();
 
-
-                    // reset base_kf_tr_frame_ = identity()
-                    mpSystem->base_kf_tr_frame_ = SE3f();
 
 
                     // If surfel updates are not done within BA, we always have to
@@ -755,7 +740,7 @@ SparseKeyFrame* Tracking::StereoInitialization()
 
         cout << "New map created with " << mpMap->MapPointsInMap() << " points" << endl;
 
-        mpLocalMapper->InsertKeyFrame(pKFini);
+
 
         mLastFrame = Frame(mCurrentFrame);
         mnLastKeyFrameId=mCurrentFrame.mnId;

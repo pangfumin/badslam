@@ -340,8 +340,8 @@ public:
     inline void GetQueuedKeyframes(
             vector<shared_ptr<Keyframe>>* queued_keyframes,
             vector<SE3f>* queued_keyframes_last_kf_tr_this_kf) const {
-        *queued_keyframes = queued_keyframes_;
-        *queued_keyframes_last_kf_tr_this_kf = queued_keyframes_last_kf_tr_this_kf_;
+//        *queued_keyframes = queued_keyframes_;
+//        *queued_keyframes_last_kf_tr_this_kf = queued_keyframes_last_kf_tr_this_kf_;
     }
 
     // Sets the queued keyframes. The GPU data for these keyframes must be fully
@@ -392,8 +392,6 @@ public:
     // Last estimated odometry poses, for the motion model.
     // The highest index corresponds to the last frame, index 0 corresponds to the
     // first frame which is still stored.
-    SE3f base_kf_tr_frame_;
-//    vector<SE3f> frame_tr_base_kf_;
 
     CUDABufferPtr<float> calibrated_depth_;
     CUDABufferPtr<uchar> calibrated_gradmag_;
@@ -426,12 +424,9 @@ public:
 
     vector<ParallelBAOptions> parallel_ba_iteration_queue_;
 
-    vector<shared_ptr<Keyframe>> queued_keyframes_;
-    vector<SE3f> queued_keyframes_last_kf_tr_this_kf_;
     vector<cudaEvent_t> queued_keyframes_events_;
 
     vector<cv::Mat_<u8>> queued_keyframe_gray_images_;
-    vector<shared_ptr<Image<u16>>> queued_keyframe_depth_images_;
 
     std::atomic<bool> quit_requested_;
     std::atomic<bool> quit_done_;

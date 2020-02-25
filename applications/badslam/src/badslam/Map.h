@@ -68,7 +68,7 @@ public:
 
 protected:
     std::set<MapPoint*> mspMapPoints;
-    std::set<SparseKeyFrame*> mspKeyFrames;
+    std::map<int, SparseKeyFrame*> mspKeyFrames;
 
     std::vector<MapPoint*> mvpReferenceMapPoints;
 
