@@ -1109,22 +1109,7 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
         }
     }
 
-    void System::AddKeyframeToBA(
-            cudaStream_t stream,
-            const shared_ptr<Keyframe>& new_keyframe,
-            cv::Mat_<u8> gray_image,
-            const shared_ptr<Image<u16>>& depth_image) {
-        mpLocalMapper->Lock();
-        mpLocalMapper->AddKeyframe(new_keyframe);
 
-        // Get a consistent set of camera and depth parameters for loop
-        // closure handling (important for the parallel BA case).
-        PinholeCamera4f color_camera = mpLocalMapper->color_camera_no_lock();
-        PinholeCamera4f depth_camera = mpLocalMapper->depth_camera_no_lock();
-        DepthParameters depth_params = mpLocalMapper->depth_params_no_lock();
-        mpLocalMapper->Unlock();
-
-    }
 
 
     void System::BAThreadMain(OpenGLContext* opengl_context) {

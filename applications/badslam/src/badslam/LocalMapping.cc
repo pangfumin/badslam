@@ -277,13 +277,7 @@ void LocalMapping::RunDenseBAOneStep(cudaStream_t stream) {
     unique_lock<mutex> lock(this->Mutex());
 
 
-
-    // Pop item from parallel_ba_iteration_queue_
-//    ParallelBAOptions options = mpSystem->parallel_ba_iteration_queue_.front();
-//    mpSystem->parallel_ba_iteration_queue_.erase(mpSystem->parallel_ba_iteration_queue_.begin());
-
     ParallelBAOptions options = mpCurrentKeyFrame->parallel_ba_iteration_;
-//    std::cout << "BAThreadMain: " <<  std::endl;
     // Add any queued keyframes (within the lock).
     bool mutex_locked = true;
 
@@ -301,11 +295,8 @@ void LocalMapping::RunDenseBAOneStep(cudaStream_t stream) {
         new_keyframe->set_global_T_frame(T_WC);
 
         cv::Mat_<u8> gray_image = mpCurrentKeyFrame->keyframe_gray_image_;
-//                mpSystem->queued_keyframe_gray_images_.front();
         cudaEvent_t keyframe_event = mpCurrentKeyFrame->keyframe_event_;
 
-//        mpSystem->queued_keyframe_gray_images_.erase(mpSystem->queued_keyframe_gray_images_.begin());
-//        mpSystem->queued_keyframes_events_.erase(mpSystem->queued_keyframes_events_.begin());
 
         // Release lock while performing loop detection.
         lock.unlock();
@@ -316,10 +307,13 @@ void LocalMapping::RunDenseBAOneStep(cudaStream_t stream) {
         cudaStreamWaitEvent(stream, keyframe_event, 0);
         cudaEventDestroy(keyframe_event);
 
-        mpSystem->AddKeyframeToBA(stream,
-                        new_keyframe,
-                        gray_image,
-                                  nullptr);
+
+
+        this->Lock();
+        this->AddKeyframe(new_keyframe);
+
+        this->Unlock();
+
     if (mutex_locked) {
         lock.unlock();
     }

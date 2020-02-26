@@ -358,16 +358,7 @@ public:
 
     // Estimates the RGB-D frame's pose from odometry based on the last keyframe.
     void RunOdometry(int frame_index, const SE3f& base_T_frame_estimate,
-    const SE3f& new_global_T_frame);
-
-    // Adds a keyframe to bundle adjustment. Perform loop detection and closure.
-    // If loop detection is disabled, gray_image may be empty.
-    void AddKeyframeToBA(
-            cudaStream_t stream,
-            const shared_ptr<Keyframe>& new_keyframe,
-            cv::Mat_<u8> gray_image,
-            const shared_ptr<Image<u16>>& depth_image);
-
+                    const SE3f& new_global_T_frame);
 
 
     // Main function of the thread which runs bundle adjustment in parallel. This
